@@ -1,0 +1,443 @@
+#import "ui_theme.h"
+#include <math.h>
+#include <objc/runtime.h>
+#include <objc/message.h>
+#import "ui_chrome_priv.h"
+
+/* ios 15 draws every navigation bar with scrollEdgeAppearance, and its default
+   is transparent: the bar image set through the old properties is ignored and
+   the dark title is left on whatever is behind the bar */
+static void ShiroApplyBarAppearance(UINavigationBar *bar, UIImage *background,
+                                    UIColor *titleColor, UIFont *titleFont) {
+    Class cls = NSClassFromString(@"UINavigationBarAppearance");
+    if (!cls || ![bar respondsToSelector:@selector(setStandardAppearance:)]) return;
+    id appearance = [[cls alloc] init];
+    if (!appearance) return;
+    if ([appearance respondsToSelector:@selector(configureWithOpaqueBackground)])
+        ((void (*)(id, SEL))objc_msgSend)(appearance, @selector(configureWithOpaqueBackground));
+    if (background && [appearance respondsToSelector:@selector(setBackgroundImage:)])
+        ((void (*)(id, SEL, id))objc_msgSend)(appearance, @selector(setBackgroundImage:),
+                                              background);
+    if ([appearance respondsToSelector:@selector(setShadowColor:)])
+        ((void (*)(id, SEL, id))objc_msgSend)(appearance, @selector(setShadowColor:), nil);
+/* the appearance object takes attributed string keys, and the legacy
+   UITextAttribute* shadow keys are not among them */
+    NSMutableDictionary *attrs = [NSMutableDictionary dictionary];
+    if (titleColor) [attrs setObject:titleColor forKey:@"NSColor"];
+    if (titleFont) [attrs setObject:titleFont forKey:@"NSFont"];
+    if ([attrs count] && [appearance respondsToSelector:@selector(setTitleTextAttributes:)])
+        ((void (*)(id, SEL, id))objc_msgSend)(appearance,
+                                              @selector(setTitleTextAttributes:), attrs);
+    ((void (*)(id, SEL, id))objc_msgSend)(bar, @selector(setStandardAppearance:), appearance);
+    if ([bar respondsToSelector:@selector(setCompactAppearance:)])
+        ((void (*)(id, SEL, id))objc_msgSend)(bar, @selector(setCompactAppearance:), appearance);
+    if ([bar respondsToSelector:@selector(setScrollEdgeAppearance:)])
+        ((void (*)(id, SEL, id))objc_msgSend)(bar, @selector(setScrollEdgeAppearance:), appearance);
+    [appearance release];
+}
+
+void StyleNavBarClassic(UINavigationController *nav) {
+    if (!nav) return;
+    UINavigationBar *bar = nav.navigationBar;
+    BOOL light = ShiroThemeIsLight();
+    BOOL flat = ShiroThemeIsFlat();
+    BOOL boy = ShiroThemeIsBoykisser();
+    BOOL miside = ShiroThemeIsMiside();
+    BOOL material = ShiroThemeIsMaterial();
+    UIImage *barBackground = nil;
+/* black chrome preserves contrast over the purple miside field on ios 6, and
+   keeps the status bar text white over material's saturated app bar */
+    BOOL barLight = light && !miside && !material;
+    bar.barStyle = barLight ? UIBarStyleDefault : UIBarStyleBlack;
+/* an opaque bar prevents old navigation controllers from covering the first section */
+    bar.translucent = NO;
+    if ([bar respondsToSelector:@selector(setBackgroundImage:forBarMetrics:)]) {
+/* from ios 7 the bar image also fills the status bar strip, and a 44 point
+   image stretched over 64 smears the gradient into a bright band under the
+   clock with a hard seam under it */
+        CGFloat top = GetTopOffset();
+        CGFloat h = 44.0f + top;
+        CGSize sz = CGSizeMake(2, h);
+        UIGraphicsBeginImageContextWithOptions(sz, YES, 0);
+        CGContextRef ctx = UIGraphicsGetCurrentContext();
+        if (material) {
+/* the app bar is one flat colour: the primary on the light baseline, a
+   surface a step above the page on the dark one */
+            CGContextSetFillColorWithColor(ctx, kChromeHi.CGColor);
+            CGContextFillRect(ctx, CGRectMake(0, 0, 2, h));
+        } else if (miside) {
+            CGContextSetRGBFillColor(ctx, 0.12f, 0.04f, 0.14f, 1.0f);
+            CGContextFillRect(ctx, CGRectMake(0, 0, 2, h));
+            CGContextSetRGBFillColor(ctx, 1.00f, 0.36f, 0.70f, 0.50f);
+            CGContextFillRect(ctx, CGRectMake(0, h - 1, 2, 1));
+        } else if (flat) {
+            if (ShiroThemeIsIos16()) {
+                if (light) {
+                    CGContextSetRGBFillColor(ctx, 0.98f, 0.96f, 0.99f, 1.0f);
+                    CGContextFillRect(ctx, CGRectMake(0, 0, 2, h));
+                    CGContextSetRGBFillColor(ctx, 0.88f, 0.84f, 0.94f, 1.0f);
+                    CGContextFillRect(ctx, CGRectMake(0, h - 1, 2, 1));
+                } else {
+                    CGContextSetRGBFillColor(ctx, 0.08f, 0.05f, 0.14f, 1.0f);
+                    CGContextFillRect(ctx, CGRectMake(0, 0, 2, h));
+                    CGContextSetRGBFillColor(ctx, 0.22f, 0.16f, 0.32f, 1.0f);
+                    CGContextFillRect(ctx, CGRectMake(0, h - 1, 2, 1));
+                }
+            } else if (light) {
+                CGContextSetRGBFillColor(ctx, 0.96f, 0.96f, 0.97f, 1.0f);
+                CGContextFillRect(ctx, CGRectMake(0, 0, 2, h));
+                CGContextSetRGBFillColor(ctx, 0.78f, 0.78f, 0.80f, 1.0f);
+                CGContextFillRect(ctx, CGRectMake(0, h - 1, 2, 1));
+            } else {
+                CGContextSetRGBFillColor(ctx, 0.12f, 0.13f, 0.15f, 1.0f);
+                CGContextFillRect(ctx, CGRectMake(0, 0, 2, h));
+                CGContextSetRGBFillColor(ctx, 0.22f, 0.22f, 0.24f, 1.0f);
+                CGContextFillRect(ctx, CGRectMake(0, h - 1, 2, 1));
+            }
+        } else {
+            CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
+            CGFloat comps[12];
+            if (boy && light) {
+                CGFloat p[] = { 1.00,0.92,0.95,1, 1.00,0.78,0.88,1, 1.00,0.68,0.82,1 };
+                memcpy(comps, p, sizeof p);
+            } else if (boy) {
+                CGFloat p[] = { 0.30,0.115,0.20,1, 0.165,0.060,0.115,1, 0.095,0.032,0.068,1 };
+                memcpy(comps, p, sizeof p);
+            } else if (ShiroThemeIsFrutigeraero() && !light) {
+/* the night wallpaper is navy, and the grey bar read as a foreign strip */
+                CGFloat n[] = { 0.18,0.36,0.70,1, 0.07,0.16,0.42,1, 0.03,0.08,0.26,1 };
+                memcpy(comps, n, sizeof n);
+            } else if (light) {
+                CGFloat l[] = { 0.96,0.95,0.92,1, 0.86,0.84,0.80,1, 0.76,0.74,0.70,1 };
+                memcpy(comps, l, sizeof l);
+            } else {
+                CGFloat d[] = { 0.42,0.43,0.46,1, 0.12,0.13,0.15,1, 0.05,0.05,0.06,1 };
+                memcpy(comps, d, sizeof d);
+            }
+            CGFloat locs[] = { 0, 0.5, 1 };
+            CGGradientRef gr = CGGradientCreateWithColorComponents(cs, comps, locs, 3);
+            if (top > 0.0f) {
+                CGContextSetRGBFillColor(ctx, comps[0], comps[1], comps[2], comps[3]);
+                CGContextFillRect(ctx, CGRectMake(0, 0, 2, top));
+            }
+            CGContextDrawLinearGradient(ctx, gr, CGPointMake(0, top), CGPointMake(0, h), 0);
+            CGGradientRelease(gr);
+            CGColorSpaceRelease(cs);
+        }
+        barBackground = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+        [bar setBackgroundImage:barBackground forBarMetrics:UIBarMetricsDefault];
+    }
+    UIColor *titleC;
+/* the boykisser dark ink is already a pink white, and plain white next to it
+   reads as a second colour on the same bar */
+    if (material)
+        titleC = light ? [UIColor whiteColor] : kInk;
+    else if (miside)
+        titleC = [UIColor whiteColor];
+    else if (light || flat || boy)
+        titleC = kInk;
+    else
+        titleC = [UIColor whiteColor];
+    UIFont *titleFont = ShiroThemeIsIos16()
+        ? ShiroFontBody(18, YES)
+        : ((flat) ? ShiroFontTitle(17) : [UIFont boldSystemFontOfSize:18]);
+    if ([bar respondsToSelector:@selector(setTitleTextAttributes:)]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        NSMutableDictionary *attrs = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+            titleC, UITextAttributeTextColor,
+            titleFont, UITextAttributeFont, nil];
+        if (flat || miside) {
+            [attrs setObject:[UIColor clearColor] forKey:UITextAttributeTextShadowColor];
+            [attrs setObject:[NSValue valueWithCGSize:CGSizeZero]
+                      forKey:UITextAttributeTextShadowOffset];
+        } else {
+            UIColor *shC = light ? [UIColor colorWithWhite:1 alpha:0.55]
+                                 : [UIColor colorWithWhite:0 alpha:0.65];
+            [attrs setObject:shC forKey:UITextAttributeTextShadowColor];
+            [attrs setObject:[NSValue valueWithCGSize:CGSizeMake(0, light ? 1 : -1)]
+                      forKey:UITextAttributeTextShadowOffset];
+        }
+#pragma clang diagnostic pop
+        [bar setTitleTextAttributes:attrs];
+    }
+    if (![bar respondsToSelector:@selector(setBackgroundImage:forBarMetrics:)]) {
+/* ios 4.3 has no bar background or title attributes: the stock bar takes its
+   colour from the tint and always draws a white title, so the tint is the
+   theme chrome held dark enough to keep that title readable */
+        UIColor *fill = material ? kChromeHi : (miside
+            ? [UIColor colorWithRed:0.12f green:0.04f blue:0.14f alpha:1.0f]
+            : (boy ? [UIColor colorWithRed:1.0f green:0.38f blue:0.68f alpha:1.0f]
+                   : kAccentBlue));
+        CGFloat r, g, b, a;
+        if (ShiroColorComponents(fill, &r, &g, &b, &a) &&
+            0.299f * r + 0.587f * g + 0.114f * b > 0.55f)
+            fill = ShiroShadeColor(fill, -0.40f);
+        bar.tintColor = fill;
+    } else if ([bar respondsToSelector:@selector(setTintColor:)]) {
+        if (material) {
+/* before ios 7 the tint colours the bezel of every bar button, so white made
+   the back and done buttons white pills on the blue bar. from ios 7 it is the
+   text colour and white is right */
+            BOOL bezels = ![bar respondsToSelector:@selector(setBarTintColor:)];
+            if (light)
+                bar.tintColor = bezels ? kChromeHi : [UIColor whiteColor];
+            else
+                bar.tintColor = kAccentBlue;
+        }
+        else if (miside)
+            bar.tintColor = [UIColor colorWithRed:1.0 green:0.55 blue:0.80 alpha:1.0];
+        else if (boy)
+            bar.tintColor = [UIColor colorWithRed:1.0 green:0.38 blue:0.68 alpha:1.0];
+        else
+            bar.tintColor = kAccentBlue;
+    }
+    if ([bar respondsToSelector:@selector(setShadowImage:)]) {
+        CGSize one = CGSizeMake(1, 1);
+        UIGraphicsBeginImageContextWithOptions(one, NO, 0);
+        UIImage *clear = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+        [bar setShadowImage:clear];
+    }
+    ShiroApplyBarAppearance(bar, barBackground, titleC, titleFont);
+/* the bar floats at 4dp over the page in material, and casts nothing elsewhere */
+    bar.layer.masksToBounds = NO;
+    if (material) ShiroMaterialElevate(bar.layer, 4.0f);
+    else bar.layer.shadowOpacity = 0.0f;
+}
+
+void StyleGlossyCapsuleLayout(UIButton *button) {
+    if (!button) return;
+    CGRect b = button.bounds;
+    if (b.size.width < 1 || b.size.height < 1) return;
+/* a contained button in material is a rectangle with 4 point corners */
+    CGFloat cr = ShiroThemeIsMaterial() ? 4.0f : b.size.height / 2.0f;
+    CAGradientLayer *body = ShiroNamedGradientLayer(button.layer, @"body");
+    CAGradientLayer *gloss = ShiroNamedGradientLayer(button.layer, @"gloss");
+    UIColor *rememberedTop = objc_getAssociatedObject(button, &ShiroStyleTopKey);
+    UIColor *rememberedBottom = objc_getAssociatedObject(button, &ShiroStyleBotKey);
+    if (body && rememberedTop && rememberedBottom) {
+        NSArray *colors = body.colors;
+        BOOL stale = [colors count] < 2 ||
+            !CGColorEqualToColor((CGColorRef)[colors objectAtIndex:0], rememberedTop.CGColor) ||
+            !CGColorEqualToColor((CGColorRef)[colors objectAtIndex:1], rememberedBottom.CGColor);
+        if (stale)
+            body.colors = [NSArray arrayWithObjects:(id)rememberedTop.CGColor,
+                                                     (id)rememberedBottom.CGColor, nil];
+        body.hidden = NO;
+        body.opacity = 1.0f;
+    }
+    if (!body || !gloss) return;
+    if (ShiroStyleSizeMatches(button, b.size)) return;
+    ShiroBeginSilentLayers();
+    button.layer.cornerRadius = cr;
+    body.frame = b;
+    body.cornerRadius = cr;
+    gloss.frame = CGRectMake(1, 1, b.size.width - 2, b.size.height * 0.48f);
+    gloss.cornerRadius = cr * 0.9f;
+    if (ShiroThemeIsIos16() || ShiroThemeIsMaterial() || !ShiroThemeIsFlat())
+        ShiroApplyShadowPath(button.layer, cr);
+    ShiroEndSilentLayers();
+    ShiroStyleRemember(button, b.size,
+                  objc_getAssociatedObject(button, &ShiroStyleTopKey),
+                  objc_getAssociatedObject(button, &ShiroStyleBotKey));
+}
+
+void StyleGlossyCapsule(UIButton *button, UIColor *top, UIColor *bottom) {
+    if (!button) return;
+    CGRect b = button.bounds;
+    if (b.size.width < 1 || b.size.height < 1) return;
+    UIColor *prevTop = objc_getAssociatedObject(button, &ShiroStyleTopKey);
+    UIColor *prevBot = objc_getAssociatedObject(button, &ShiroStyleBotKey);
+    BOOL sameColors = (prevTop == top && prevBot == bottom);
+    BOOL ios26 = ShiroThemeIsIos26();
+/* reuse avoids adding duplicate chrome layers during repeated layout passes */
+    if (sameColors && ShiroStyleSizeMatches(button, b.size) &&
+        ShiroNamedGradientLayer(button.layer, @"body")) {
+        StyleGlossyCapsuleLayout(button);
+        return;
+    }
+
+    CGFloat cr = ShiroThemeIsMaterial() ? 4.0f : b.size.height / 2.0f;
+    BOOL flat = ShiroThemeIsFlat();
+    BOOL light = ShiroThemeIsLight();
+    ShiroBeginSilentLayers();
+    button.layer.cornerRadius = cr;
+    button.layer.masksToBounds = NO;
+    BOOL ios16 = ShiroThemeIsIos16();
+    if (ios26) {
+        button.layer.borderWidth = 0.5f;
+        button.layer.borderColor = light
+            ? [UIColor colorWithWhite:1 alpha:0.90].CGColor
+            : [UIColor colorWithWhite:1 alpha:0.40].CGColor;
+        button.layer.shadowColor = [UIColor colorWithWhite:0 alpha:1].CGColor;
+        button.layer.shadowOffset = CGSizeMake(0, 4);
+        button.layer.shadowOpacity = light ? 0.12f : 0.36f;
+        button.layer.shadowRadius = 8.0f;
+        ShiroApplyShadowPath(button.layer, cr);
+    } else if (ShiroThemeIsMaterial()) {
+        button.layer.borderWidth = 0;
+        button.layer.borderColor = [UIColor clearColor].CGColor;
+        ShiroMaterialElevate(button.layer, 2.0f);
+        ShiroApplyShadowPath(button.layer, cr);
+    } else if (flat) {
+        button.layer.borderWidth = 0;
+        button.layer.borderColor = [UIColor clearColor].CGColor;
+        if (ios16) {
+            button.layer.shadowColor = [UIColor blackColor].CGColor;
+            button.layer.shadowOffset = CGSizeMake(0, 2);
+            button.layer.shadowOpacity = light ? 0.14f : 0.30f;
+            button.layer.shadowRadius = 5;
+            ShiroApplyShadowPath(button.layer, cr);
+        } else {
+            button.layer.shadowOpacity = 0.0f;
+            button.layer.shadowRadius = 0;
+            button.layer.shadowPath = nil;
+        }
+    } else {
+        button.layer.borderWidth = 0;
+        button.layer.borderColor = [UIColor clearColor].CGColor;
+        button.layer.shadowOpacity = 0.0f;
+        button.layer.shadowRadius = 0;
+        button.layer.shadowPath = nil;
+    }
+
+    CAGradientLayer *body = ShiroNamedGradientLayer(button.layer, @"body");
+    if (!body) {
+        body = [CAGradientLayer layer];
+        body.name = @"body";
+        [button.layer insertSublayer:body atIndex:0];
+    }
+    body.frame = b;
+    body.cornerRadius = cr;
+    if (ios26) {
+        body.colors = [NSArray arrayWithObjects:
+                       (id)[UIColor colorWithWhite:1 alpha:light ? 0.18f : 0.12f].CGColor,
+                       (id)[UIColor colorWithWhite:1 alpha:light ? 0.05f : 0.03f].CGColor, nil];
+        body.hidden = NO;
+        body.opacity = 1.0f;
+    } else if (ios16)
+        body.colors = [NSArray arrayWithObjects:(id)top.CGColor, (id)bottom.CGColor, nil];
+    else if (flat)
+        body.colors = [NSArray arrayWithObjects:(id)top.CGColor, (id)top.CGColor, nil];
+    else
+        body.colors = [NSArray arrayWithObjects:(id)top.CGColor, (id)bottom.CGColor, nil];
+
+    CAGradientLayer *gloss = ShiroNamedGradientLayer(button.layer, @"gloss");
+    if (!gloss) {
+        gloss = [CAGradientLayer layer];
+        gloss.name = @"gloss";
+        [button.layer insertSublayer:gloss above:body];
+    }
+    gloss.frame = CGRectMake(1, 1, b.size.width - 2, b.size.height * 0.48f);
+    gloss.cornerRadius = cr * 0.9f;
+    if (ios26 || flat) {
+        gloss.hidden = YES;
+        gloss.colors = [NSArray arrayWithObjects:
+                        (id)[UIColor clearColor].CGColor,
+                        (id)[UIColor clearColor].CGColor, nil];
+    } else {
+        gloss.hidden = NO;
+        gloss.colors = [NSArray arrayWithObjects:
+                        (id)[UIColor colorWithWhite:1 alpha:0.55].CGColor,
+                        (id)[UIColor colorWithWhite:1 alpha:0.05].CGColor, nil];
+    }
+    if (b.size.width <= 200.0f && b.size.height <= 48.0f) {
+        button.layer.shouldRasterize = YES;
+        button.layer.rasterizationScale = [UIScreen mainScreen].scale;
+    } else {
+        button.layer.shouldRasterize = NO;
+    }
+    ShiroEndSilentLayers();
+
+    if (ios26) {
+        ShiroInstallFrost(button);
+/* the glass caches itself, and rasterizing the layer that holds it makes core
+   animation rebuild the blur offscreen on every frame through coreui and core
+   image. the same pairing is refused on the section plate for this reason */
+        button.layer.shouldRasterize = NO;
+        button.titleLabel.font = ShiroFontBody(13, YES);
+        [button setTitleColor:light ? kInk : [UIColor whiteColor]
+                     forState:UIControlStateNormal];
+        button.titleLabel.shadowColor = nil;
+        button.titleLabel.shadowOffset = CGSizeZero;
+    } else if (ShiroThemeIsMaterial()) {
+/* medium weight, and whichever of white and black reads on the fill: the dark
+   baseline's pale purple would lose white text */
+        button.titleLabel.font = ShiroFontBody(14, YES);
+        [button setTitleColor:ShiroPillLabelColor(top) forState:UIControlStateNormal];
+        button.titleLabel.shadowColor = nil;
+        button.titleLabel.shadowOffset = CGSizeZero;
+    } else {
+        if (b.size.width > 160.0f || b.size.height > 40.0f) {
+            if (!button.titleLabel.font || button.titleLabel.font.pointSize < 14.0f)
+                button.titleLabel.font = [UIFont boldSystemFontOfSize:18];
+        } else if (ios16) {
+            button.titleLabel.font = ShiroFontBody(13, YES);
+        } else {
+            button.titleLabel.font = (flat)
+                ? [UIFont systemFontOfSize:13]
+                : [UIFont boldSystemFontOfSize:12];
+        }
+        ShiroStyleChromeTitle(button);
+    }
+    ShiroStyleRemember(button, b.size, top, bottom);
+}
+
+CGFloat GetTopOffset(void) {
+    UIEdgeInsets safe = ShiroSafeAreaInsets([UIApplication sharedApplication].keyWindow);
+    if (safe.top > 0.0f) return safe.top;
+    if ([[[UIDevice currentDevice] systemVersion] floatValue] < 7.0f)
+        return 0.0f;
+    CGRect sb = [UIApplication sharedApplication].statusBarFrame;
+    CGFloat h = sb.size.height;
+    CGFloat w = sb.size.width;
+/* the shorter edge remains the status thickness after landscape axis swaps */
+    CGFloat edge = h;
+    if (w > 0.0f && w < edge) edge = w;
+    if (edge < 1.0f) edge = 20.0f;
+    return edge;
+}
+
+UIEdgeInsets ShiroSafeAreaInsets(UIView *view) {
+    UIEdgeInsets zero = UIEdgeInsetsZero;
+    if (!view) return zero;
+    SEL sel = NSSelectorFromString(@"safeAreaInsets");
+    if (![view respondsToSelector:sel]) return zero;
+    IMP imp = [view methodForSelector:sel];
+    if (!imp) return zero;
+    UIEdgeInsets (*call)(id, SEL) = (UIEdgeInsets (*)(id, SEL))imp;
+    UIEdgeInsets insets = call(view, sel);
+    if (insets.top < 0.0f || insets.left < 0.0f ||
+        insets.bottom < 0.0f || insets.right < 0.0f)
+        return zero;
+    return insets;
+}
+
+@interface ShiroBackdropView : UIView
+@end
+
+@implementation ShiroBackdropView
++ (Class)layerClass { return [CAGradientLayer class]; }
+@end
+
+CAGradientLayer *AddVGradient(UIView *view, UIColor *top, UIColor *bottom) {
+    if (!view) return nil;
+    ShiroBackdropView *host = (ShiroBackdropView *)[view viewWithTag:kShiroBackdropTag];
+    if (![host isKindOfClass:[ShiroBackdropView class]] || host.superview != view) {
+        host = [[[ShiroBackdropView alloc] initWithFrame:view.bounds] autorelease];
+        host.tag = kShiroBackdropTag;
+        host.userInteractionEnabled = NO;
+        host.autoresizingMask = UIViewAutoresizingFlexibleWidth |
+                                UIViewAutoresizingFlexibleHeight;
+        [view insertSubview:host atIndex:0];
+    } else {
+        host.frame = view.bounds;
+        [view sendSubviewToBack:host];
+    }
+    CAGradientLayer *gradient = (CAGradientLayer *)host.layer;
+    gradient.name = @"vgrad";
+    gradient.colors = [NSArray arrayWithObjects:(id)top.CGColor, (id)bottom.CGColor, nil];
+    return gradient;
+}

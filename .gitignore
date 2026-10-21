@@ -1,0 +1,17 @@
+/build/
+*.deb
+*.ipa
+__pycache__/
+*.py[cod]
+
+.DS_Store
+*~
+.*.swp
+.*.swo
+
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.p8

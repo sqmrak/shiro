@@ -1,0 +1,11 @@
+#!/bin/sh
+# ios 5 package scripts cannot assume bash or env is installed
+set -eu
+jbroot=
+if [ -e /var/jb/.procursus_strapped ] || [ -x /var/jb/basebin/launchctl ] || [ -x /var/jb/usr/bin/dpkg ]; then jbroot=/var/jb; fi
+launchctl=${jbroot}/bin/launchctl
+[ -x "$launchctl" ] || launchctl=${jbroot}/usr/bin/launchctl
+[ -x "$launchctl" ] || launchctl=/bin/launchctl
+if "$launchctl" list com.shiro.shirod >/dev/null 2>&1; then
+    "$launchctl" unload "${jbroot}/Library/LaunchDaemons/com.shiro.shirod.plist"
+fi

@@ -1,0 +1,30 @@
+#!/bin/sh
+# preserve accounts and preferences when removing the application
+set -eu
+case "${1:-remove}" in remove|purge) ;; *) exit 0 ;; esac
+
+shiro_status_remove() {
+    status_dir=$1
+    if [ -f "$status_dir/.shirostatus-managed" ]; then
+        rm -f "$status_dir/shirostatus.dylib" "$status_dir/shirostatus.plist" \
+            "$status_dir/.shirostatus-managed"
+        return
+    fi
+    for status_name in shirostatus.dylib shirostatus.plist; do
+        status_target=$status_dir/$status_name
+        if [ -L "$status_target" ]; then
+            case "$(readlink "$status_target")" in
+                /var/jb/usr/lib/shirostatus.dylib|/var/jb/usr/lib/shirostatus-modern.dylib|/var/jb/usr/lib/shirostatus.plist) rm -f "$status_target" ;;
+            esac
+        fi
+    done
+}
+for dir in /Library/MobileSubstrate/DynamicLibraries /usr/lib/TweakInject /var/jb/Library/MobileSubstrate/DynamicLibraries /var/jb/usr/lib/TweakInject; do
+    shiro_status_remove "$dir"
+done
+if [ -f /Applications/Shiro.app/.shiro-managed ]; then rm -rf /Applications/Shiro.app; fi
+if [ -L /Library/LaunchDaemons/com.shiro.shirod.plist ]; then
+    target=$(readlink /Library/LaunchDaemons/com.shiro.shirod.plist)
+    if [ "$target" = /var/jb/Library/LaunchDaemons/com.shiro.shirod.plist ]; then rm -f /Library/LaunchDaemons/com.shiro.shirod.plist; fi
+fi
+rm -f /var/mobile/Library/Preferences/com.shiro.status.state

@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Shiro</string>
+	<key>CFBundleExecutable</key>
+	<string>Shiro</string>
+	<key>CFBundleIconFiles</key>
+	<array>
+		<string>Icon</string>
+		<string>Icon@2x</string>
+		<string>Icon-72</string>
+		<string>Icon-72@2x</string>
+		<string>Icon-60@2x</string>
+		<string>Icon-60@3x</string>
+		<string>Icon-76</string>
+		<string>Icon-76@2x</string>
+		<string>Icon-83.5@2x</string>
+	</array>
+	<key>CFBundleIdentifier</key>
+	<string>com.shiro.app</string>
+	<key>CFBundleName</key>
+	<string>Shiro</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0-stable</string>
+	<key>CFBundleVersion</key>
+	<string>1.0.0-stable</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>MinimumOSVersion</key>
+	<string>5.0</string>
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>1</integer>
+		<integer>2</integer>
+	</array>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UILaunchImages</key>
+	<array>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-phone-320x480-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{320, 480}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-phone-320x568-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{320, 568}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-phone-375x667-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{375, 667}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-phone-414x736-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{414, 736}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-phone-375x812-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{375, 812}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-phone-414x896-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{414, 896}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-phone-390x844-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{390, 844}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-phone-428x926-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{428, 926}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-phone-393x852-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{393, 852}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-phone-430x932-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{430, 932}</string>
+		</dict>
+	</array>
+	<key>UILaunchImages~ipad</key>
+	<array>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-pad-768x1024-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{768, 1024}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-pad-768x1024-Landscape</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Landscape</string>
+			<key>UILaunchImageSize</key>
+			<string>{1024, 768}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-pad-834x1112-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{834, 1112}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-pad-834x1112-Landscape</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Landscape</string>
+			<key>UILaunchImageSize</key>
+			<string>{1112, 834}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-pad-834x1194-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{834, 1194}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-pad-834x1194-Landscape</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Landscape</string>
+			<key>UILaunchImageSize</key>
+			<string>{1194, 834}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-pad-1024x1366-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{1024, 1366}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-pad-1024x1366-Landscape</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Landscape</string>
+			<key>UILaunchImageSize</key>
+			<string>{1366, 1024}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-pad-820x1180-Portrait</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Portrait</string>
+			<key>UILaunchImageSize</key>
+			<string>{820, 1180}</string>
+		</dict>
+		<dict>
+			<key>UILaunchImageName</key>
+			<string>Launch-pad-820x1180-Landscape</string>
+			<key>UILaunchImageMinimumOSVersion</key>
+			<string>7.0</string>
+			<key>UILaunchImageOrientation</key>
+			<string>Landscape</string>
+			<key>UILaunchImageSize</key>
+			<string>{1180, 820}</string>
+		</dict>
+	</array>
+</dict>
+</plist>

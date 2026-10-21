@@ -1,0 +1,60 @@
+#!/bin/sh
+# ios 5 package scripts cannot assume bash or env is installed
+set -eu
+payload=/var/jb
+jbroot=
+if [ -e /var/jb/.procursus_strapped ] || [ -x /var/jb/basebin/launchctl ] || [ -x /var/jb/usr/bin/dpkg ]; then jbroot=/var/jb; fi
+launchctl=${jbroot}/bin/launchctl
+[ -x "$launchctl" ] || launchctl=${jbroot}/usr/bin/launchctl
+[ -x "$launchctl" ] || launchctl=/bin/launchctl
+plist=${jbroot}/Library/LaunchDaemons/com.shiro.shirod.plist
+substrate=${jbroot}/Library/MobileSubstrate/DynamicLibraries
+if [ -d "${jbroot}/usr/lib/TweakInject" ] && [ ! -d "$substrate" ]; then substrate=${jbroot}/usr/lib/TweakInject; fi
+mkdir -p "$substrate" /var/root/Library/Shiro
+chmod 700 /var/root/Library/Shiro
+if [ -z "$jbroot" ]; then
+    mkdir -p /Library/LaunchDaemons
+    if [ -e "$plist" ] && [ ! -L "$plist" ]; then echo "refusing to replace unmanaged $plist" >&2; exit 1; fi
+    ln -sf "$payload/Library/LaunchDaemons/com.shiro.shirod.plist" "$plist"
+    app=/Applications/Shiro.app
+    if [ -e "$app" ] && [ ! -f "$app/.shiro-managed" ]; then echo "refusing to replace unmanaged $app" >&2; exit 1; fi
+    if [ -e "${app}.dpkg-new" ]; then echo "remove the previous Shiro staging directory first: ${app}.dpkg-new" >&2; exit 1; fi
+    cp -R "$payload/Applications/Shiro.app" "${app}.dpkg-new"
+    : > "${app}.dpkg-new/.shiro-managed"
+    if [ -d "$app" ]; then rm -rf "$app"; fi
+    mv "${app}.dpkg-new" "$app"
+fi
+kernel=$(uname -r)
+kernel=${kernel%%.*}
+status=$payload/usr/lib/shirostatus.dylib
+if [ "$kernel" -ge 20 ]; then status=$payload/usr/lib/shirostatus-modern.dylib; fi
+. "$payload/usr/lib/shiro-status.sh"
+status_rootless=0
+[ -z "$jbroot" ] || status_rootless=1
+shiro_status_install "$status" "$payload/usr/lib/shirostatus.plist" "$substrate" "$status_rootless"
+chown 0:0 "$substrate/shirostatus.dylib" "$substrate/shirostatus.plist" "$substrate/.shirostatus-managed"
+install_log=/var/root/Library/Shiro/install.log
+printf 'status extension: kernel=%s rootless=%s source=%s target=%s\n' "$kernel" "$status_rootless" "$status" "$substrate" > "$install_log"
+chmod 600 "$install_log"
+LAUNCHCTL=$launchctl
+. "$payload/usr/lib/shiro-launchd.sh"
+select_launchctl_context || { echo 'cannot reach system launchd' >&2; exit 1; }
+if launchd_socket_lost; then
+    if daemon_pid="$(launchd_job_pid)"; then
+        # the job still belongs to launchd; KeepAlive loads the replacement after cleanup
+        kill -TERM "$daemon_pid"
+        echo 'ios 6 launchd socket is absent, KeepAlive is restarting the existing Shiro job'
+    else
+        echo 'ios 6 launchd socket is absent, Shiro will start after a full device reboot'
+    fi
+else
+    if launchd_loaded; then launchctl_cmd unload "$plist"; fi
+    launchctl_cmd load -w "$plist"
+    launchd_loaded || { echo 'shirod was not registered with launchd' >&2; exit 1; }
+fi
+uicache=${jbroot}/usr/bin/uicache
+[ -x "$uicache" ] || uicache=/usr/bin/uicache
+if [ -x "$uicache" ]; then
+    if [ -z "$jbroot" ]; then su mobile -c "$uicache"; else "$uicache"; fi
+else echo 'uicache is absent, refresh the application list manually' >&2; fi
+echo 'restart SpringBoard to load the Shiro VPN badge'

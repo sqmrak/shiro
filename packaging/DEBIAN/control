@@ -1,0 +1,10 @@
+Package: com.shiro.daemon
+Name: Shiro
+Version: 1.0.0-stable
+Architecture: all
+Description: Cloudflare WARP client for jailbroken iOS 5 and later
+Maintainer: sqmrak
+Author: sqmrak
+Section: Networking
+Priority: optional
+Depends: firmware (>= 5.0)
