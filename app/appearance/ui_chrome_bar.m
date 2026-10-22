@@ -211,8 +211,7 @@ void StyleGlossyCapsuleLayout(UIButton *button) {
     if (!button) return;
     CGRect b = button.bounds;
     if (b.size.width < 1 || b.size.height < 1) return;
-/* a contained button in material is a rectangle with 4 point corners */
-    CGFloat cr = ShiroThemeIsMaterial() ? 4.0f : b.size.height / 2.0f;
+    CGFloat cr = b.size.height / 2.0f;
     CAGradientLayer *body = ShiroNamedGradientLayer(button.layer, @"body");
     CAGradientLayer *gloss = ShiroNamedGradientLayer(button.layer, @"gloss");
     UIColor *rememberedTop = objc_getAssociatedObject(button, &ShiroStyleTopKey);
@@ -259,7 +258,7 @@ void StyleGlossyCapsule(UIButton *button, UIColor *top, UIColor *bottom) {
         return;
     }
 
-    CGFloat cr = ShiroThemeIsMaterial() ? 4.0f : b.size.height / 2.0f;
+    CGFloat cr = b.size.height / 2.0f;
     BOOL flat = ShiroThemeIsFlat();
     BOOL light = ShiroThemeIsLight();
     ShiroBeginSilentLayers();

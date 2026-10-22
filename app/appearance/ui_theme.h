@@ -68,7 +68,7 @@ BOOL ShiroThemeIsBoykisser(void);
 BOOL ShiroThemeIsMiside(void);
 /* 1 for shiro-frutigeraero / shiro-aero (sky gloss, light only) */
 BOOL ShiroThemeIsFrutigeraero(void);
-/* 1 for shiro-material: flat surfaces, elevation shadows, touch ripples and a
+/* 1 for the material expressive theme: flat surfaces, elevation shadows, touch ripples and a
    circular progress ring on the power button (see material.h) */
 BOOL ShiroThemeIsMaterial(void);
 /* card corner; larger on ios16 */

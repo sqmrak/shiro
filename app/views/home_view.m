@@ -234,7 +234,7 @@ static CGPathRef ShiroCirclePath(CGPoint c, CGFloat r) {
     BOOL light = ShiroThemeIsLight();
     BOOL flat = ShiroThemeIsFlat() && !ShiroThemeIsIos16();
     ShiroBeginSilentLayers();
-/* a switch away from shiro-material puts back what it hid and moved */
+/* a switch away from the material layout puts back what it hid and moved */
     _track.hidden = NO;
     _ring.hidden = NO;
     _faceFill.hidden = NO;

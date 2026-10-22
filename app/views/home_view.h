@@ -12,7 +12,7 @@
 @end
 
 /* the power control with a dot circling its rim. the dot turns on the render
-   server, so an armv7 cpu pays nothing per frame while it moves. shiro-material
+   server, so an armv7 cpu pays nothing per frame while it moves. the material theme
    draws it as a floating action button instead: a filled disc that changes
    colour with the tunnel state and a progress ring that turns while it dials */
 @interface ShiroOrbitButton : UIControl {

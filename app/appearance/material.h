@@ -4,8 +4,8 @@
 #import <UIKit/UIKit.h>
 #import <QuartzCore/QuartzCore.h>
 
-/* the motion and depth of shiro-material. nothing here runs unless that theme
-   is active, so the other themes pay nothing for it */
+/* the motion and depth of the material expressive theme. nothing here runs
+   unless its caps are active, so a theme without them pays nothing for it */
 
 /* material's easing curves: standard for things that stay on screen,
    deceleration for things that arrive, acceleration for things that leave */
