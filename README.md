@@ -15,7 +15,7 @@
 - arm64: ios 7 and later
 - arm64e: ios 14 and later
 
-these are the binary deployment targets. installation, daemon startup and a WARP connection have been checked on an iphone 4s running ios 6.1.3.
+these are the binary deployment targets.
 
 ## protocol
 
@@ -68,8 +68,8 @@ the VPN badge uses a SpringBoard extension loaded by MobileSubstrate or a compat
 use the deb from `build/`:
 
 ```bash
-scp -O build/shiro-1.0.0-stable.deb root@<device-ip>:/var/mobile/
-ssh root@<device-ip> 'dpkg -i /var/mobile/shiro-1.0.0-stable.deb'
+scp -O build/shiro-1.1.0-stable.deb root@<device-ip>:/var/mobile/
+ssh root@<device-ip> 'dpkg -i /var/mobile/shiro-1.1.0-stable.deb'
 ```
 
 old SSH servers may require `-o HostKeyAlgorithms=+ssh-rsa` for both commands.
@@ -128,7 +128,7 @@ make test
 make deb
 ```
 
-outputs `build/shiro-1.0.0-stable.deb`. the package build runs host tests, inspects the architecture slices and checks package layout, ownership, permissions and signature records.
+outputs `build/shiro-1.1.0-stable.deb`. the package build runs host tests, inspects the architecture slices and checks package layout, ownership, permissions and signature records.
 
 `SHIRO_TC` overrides the toolchain directory, `SHIRO_SDK_VE` overrides the arm64e SDK, `SHIRO_PYTHON` selects Python, and `SHIRO_LDID` selects the signer. `SHIRO_HOST_CC` selects the host compiler. arm64e uses the modern compiler; the other slices use the toolchain compiler.
 

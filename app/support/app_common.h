@@ -5,7 +5,7 @@
 #import "control_client.h"
 #import "dev_table_vc.h"
 #define SHIRO_SOCK @"/var/run/shiro/control.sock"
-#define SHIRO_VERSION @"v1.0.0-stable"
+#define SHIRO_VERSION @"v1.1.0-stable"
 #define SHIRO_LANGUAGE_KEY @"ShiroLanguage"
 #define SHIRO_DEV_MENU_KEY @"ShiroDeveloperMenu"
 #define SHIRO_FPS_OVERLAY_KEY @"ShiroDeveloperFPSOverlay"
