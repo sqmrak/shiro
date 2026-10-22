@@ -591,7 +591,7 @@ done:
         shiro_core_stats(_core, &raw);
         _lastStats.bytesIn = raw.bytes_in;
         _lastStats.bytesOut = raw.bytes_out;
-        _lastStats.ageMs = raw.session_age_ms;
+        _lastStats.uptimeMs = raw.uptime_ms;
         _lastStats.handshakes = raw.handshakes;
         got = YES;
     }

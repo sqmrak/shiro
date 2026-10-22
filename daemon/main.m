@@ -116,7 +116,7 @@ static NSDictionary *command(NSDictionary *request) {
         [NSNumber numberWithInteger:vpn.state], @"state", [NSNumber numberWithInteger:vpn.failure], @"failure",
         [NSNumber numberWithBool:vpn.enabled], @"enabled", vpn.lastError, @"lastError",
         [NSNumber numberWithUnsignedLongLong:stats.bytesIn], @"bytesIn", [NSNumber numberWithUnsignedLongLong:stats.bytesOut], @"bytesOut",
-        [NSNumber numberWithUnsignedLongLong:stats.ageMs], @"ageMs", [NSNumber numberWithUnsignedInt:stats.handshakes], @"handshakes",
+        [NSNumber numberWithUnsignedLongLong:stats.uptimeMs], @"uptimeMs", [NSNumber numberWithUnsignedInt:stats.handshakes], @"handshakes",
         [defaults stringForKey:@"shiro.direct"] ?: @"", @"direct", [defaults stringForKey:@"shiro.block"] ?: @"", @"block",
         [defaults stringForKey:@"shiro.dns"] ?: @"1.1.1.1", @"dns", [NSNumber numberWithBool:[defaults boolForKey:@"shiro.trace"]], @"trace",
         [NSNumber numberWithInt:getpid()], @"pid", [NSNumber numberWithInt:shiro_ios_major()], @"ios",

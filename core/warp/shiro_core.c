@@ -108,6 +108,7 @@ struct shiro_core {
     shiro_tcpip *stack;
     uint64_t last_rx_ms, last_tx_ms, unanswered_since;
     uint64_t bytes_in, bytes_out;
+    uint64_t up_since_ms;
     uint32_t handshakes;
     relay relays[SHIRO_TCPIP_MAX_CONNECTIONS];
     udp_socket udps[MAX_UDP];
@@ -207,6 +208,7 @@ static void on_handshake_done(shiro_core *e, const shiro_wg_session *fresh, uint
     send_datagram(e, NULL, 0, now);
     if (first) {
         if (e->packet_fd < 0) shiro_tcpip_new(&e->stack, e->identity.address, SHIRO_WARP_MTU, stack_emit, e);
+        e->up_since_ms = now;
         trace(e, "tunnel up after %llu ms", (unsigned long long)(now - e->hs_sent_ms));
         if (e->packet_fd < 0 && !e->stack) {
             set_state(e, SHIRO_DOWN, SHIRO_E_NOMEM);
@@ -541,7 +543,7 @@ static void snapshot(shiro_core *e, uint64_t now) {
     e->stats.bytes_in = e->bytes_in;
     e->stats.bytes_out = e->bytes_out;
     e->stats.handshakes = e->handshakes;
-    e->stats.session_age_ms = e->session.active ? shiro_wg_session_age_ms(&e->session, now) : 0;
+    e->stats.uptime_ms = e->session.active ? elapsed_ms(now, e->up_since_ms) : 0;
     e->stats.streams = streams;
     pthread_mutex_unlock(&e->lock);
 }

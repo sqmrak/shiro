@@ -30,7 +30,8 @@ typedef struct shiro_events {
 typedef struct shiro_stats {
     uint64_t bytes_in, bytes_out;           /* UDP payload bytes to and from the server */
     uint32_t handshakes;
-    uint64_t session_age_ms;
+    /* time since the tunnel came up, not the age of the current keys: a renewal replaces the keys every two minutes and would restart the count */
+    uint64_t uptime_ms;
     unsigned streams;
 } shiro_stats;
 

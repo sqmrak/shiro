@@ -311,7 +311,7 @@ static const CGFloat kStatsGap = 12.0f;
         NSInteger state = [[reply objectForKey:@"state"] integerValue];
         [self setStateText:!error && state == 3 ? @"connected" : !error && (state == 1 || state == 2) ? @"connecting" : @"idle"];
         _uptimeKnown = !error && state == 3;
-        _uptime = [[reply objectForKey:@"ageMs"] longLongValue] / 1000;
+        _uptime = [[reply objectForKey:@"uptimeMs"] longLongValue] / 1000;
         _uptimeAt = CACurrentMediaTime();
         [self applyTrafficKnown:!error up:[[reply objectForKey:@"bytesOut"] unsignedLongLongValue] down:[[reply objectForKey:@"bytesIn"] unsignedLongLongValue]];
         [self refreshValues];

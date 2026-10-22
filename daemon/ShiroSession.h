@@ -24,7 +24,7 @@ typedef enum {
 
 typedef struct {
     unsigned long long bytesIn, bytesOut;
-    unsigned long long ageMs;
+    unsigned long long uptimeMs;
     unsigned handshakes;
 } ShiroStats;
 
