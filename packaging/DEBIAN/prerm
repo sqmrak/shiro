@@ -6,6 +6,17 @@ if [ -e /var/jb/.procursus_strapped ] || [ -x /var/jb/basebin/launchctl ] || [ -
 launchctl=${jbroot}/bin/launchctl
 [ -x "$launchctl" ] || launchctl=${jbroot}/usr/bin/launchctl
 [ -x "$launchctl" ] || launchctl=/bin/launchctl
-if "$launchctl" list com.shiro.shirod >/dev/null 2>&1; then
-    "$launchctl" unload "${jbroot}/Library/LaunchDaemons/com.shiro.shirod.plist"
+[ -x "$launchctl" ] || exit 0
+LAUNCHCTL=$launchctl
+PLIST=${jbroot}/Library/LaunchDaemons/com.shiro.shirod.plist
+. /var/jb/usr/lib/shiro-launchd.sh
+select_launchctl_context || { echo 'shiro: cannot reach system launchd to stop shirod' >&2; exit 1; }
+if launchd_socket_lost; then
+    # postinst restarts the job launchd still holds through KeepAlive
+    case "${1:-remove}" in upgrade|failed-upgrade) exit 0 ;; esac
+    echo 'shiro: launchd cannot unload shirod until the device reboots' >&2
+    # SIGTERM makes shirod take its routes down before dpkg deletes the binary
+    if pid="$(launchd_job_pid)"; then kill -TERM "$pid" 2>/dev/null || true; fi
+else
+    launchd_stop
 fi

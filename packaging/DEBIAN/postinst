@@ -12,10 +12,53 @@ substrate=${jbroot}/Library/MobileSubstrate/DynamicLibraries
 if [ -d "${jbroot}/usr/lib/TweakInject" ] && [ ! -d "$substrate" ]; then substrate=${jbroot}/usr/lib/TweakInject; fi
 mkdir -p "$substrate" /var/root/Library/Shiro
 chmod 700 /var/root/Library/Shiro
+daemon_note=
+# the kernel kills a binary it refuses at exec with status 137 and no output, so a daemon that never answers
+# says nothing. --probe prints a word and exits without starting the daemon
+shirod_starts() {
+    [ "$("$1" --probe 2>/dev/null </dev/null)" = shirod ]
+}
+# a rootful ios 12 iphone 6 (12.5) kills shirod at exec from /var/jb/usr/bin/shirod and from a link to it, as it
+# does senkod. the daemon runs from a real copy on the system volume. a copy that is killed is signed again by an
+# ldid on the device, which writes the hash types that jailbreak accepts
+install_rootful_daemon() {
+    target=/usr/bin/shirod
+    stage=/usr/bin/.shirod.dpkg-new
+    rm -f "$stage"
+    cp "$payload/usr/bin/shirod" "$stage" || return 1
+    chmod 755 "$stage" || return 1
+    chown 0:0 "$stage" || return 1
+    daemon_note='copy in /usr/bin'
+    if ! shirod_starts "$stage"; then
+        daemon_note=
+        for ldid_tool in /var/jb/usr/bin/ldid /usr/bin/ldid /usr/local/bin/ldid; do
+            [ -x "$ldid_tool" ] || continue
+            for ldid_flags in '-S' '-Hsha1 -S'; do
+                cp "$payload/usr/bin/shirod" "$stage" || return 1
+                # the flags are a fixed pair of words, so splitting them is the intent
+                "$ldid_tool" $ldid_flags "$stage" >/dev/null 2>&1 || continue
+                if shirod_starts "$stage"; then daemon_note="copy in /usr/bin signed again by $ldid_tool $ldid_flags"; break 2; fi
+            done
+        done
+        if [ -z "$daemon_note" ]; then
+            rm -f "$stage"
+            echo 'the system kills shirod at exec (status 137) and no ldid on the device can sign it again' >&2
+            return 1
+        fi
+    fi
+    mv -f "$stage" "$target" || return 1
+}
 if [ -z "$jbroot" ]; then
     mkdir -p /Library/LaunchDaemons
-    if [ -e "$plist" ] && [ ! -L "$plist" ]; then echo "refusing to replace unmanaged $plist" >&2; exit 1; fi
-    ln -sf "$payload/Library/LaunchDaemons/com.shiro.shirod.plist" "$plist"
+    # older packages linked the plist to the payload, which a rootful launchd runs as a killed binary
+    if [ -e "$plist" ] && [ ! -L "$plist" ] && ! grep -q com.shiro.shirod "$plist"; then echo "refusing to replace unmanaged $plist" >&2; exit 1; fi
+    install_rootful_daemon || exit 1
+    rm -f "$plist.dpkg-new"
+    sed 's#<string>/var/jb/usr/bin/shirod</string>#<string>/usr/bin/shirod</string>#' "$payload/Library/LaunchDaemons/com.shiro.shirod.plist" > "$plist.dpkg-new"
+    grep -q '<string>/usr/bin/shirod</string>' "$plist.dpkg-new" || { rm -f "$plist.dpkg-new"; echo 'cannot point the launchd plist at /usr/bin/shirod' >&2; exit 1; }
+    chmod 644 "$plist.dpkg-new"
+    chown 0:0 "$plist.dpkg-new"
+    mv -f "$plist.dpkg-new" "$plist"
     app=/Applications/Shiro.app
     if [ -e "$app" ] && [ ! -f "$app/.shiro-managed" ]; then echo "refusing to replace unmanaged $app" >&2; exit 1; fi
     if [ -e "${app}.dpkg-new" ]; then echo "remove the previous Shiro staging directory first: ${app}.dpkg-new" >&2; exit 1; fi
@@ -35,22 +78,37 @@ shiro_status_install "$status" "$payload/usr/lib/shirostatus.plist" "$substrate"
 chown 0:0 "$substrate/shirostatus.dylib" "$substrate/shirostatus.plist" "$substrate/.shirostatus-managed"
 install_log=/var/root/Library/Shiro/install.log
 printf 'status extension: kernel=%s rootless=%s source=%s target=%s\n' "$kernel" "$status_rootless" "$status" "$substrate" > "$install_log"
+[ -z "$daemon_note" ] || printf 'daemon: %s\n' "$daemon_note" >> "$install_log"
 chmod 600 "$install_log"
 LAUNCHCTL=$launchctl
+PLIST=$plist
 . "$payload/usr/lib/shiro-launchd.sh"
 select_launchctl_context || { echo 'cannot reach system launchd' >&2; exit 1; }
-if launchd_socket_lost; then
-    if daemon_pid="$(launchd_job_pid)"; then
-        # the job still belongs to launchd; KeepAlive loads the replacement after cleanup
-        kill -TERM "$daemon_pid"
-        echo 'ios 6 launchd socket is absent, KeepAlive is restarting the existing Shiro job'
-    else
+# launchd holds the job it loaded at boot, and KeepAlive starts the new binary once the old process exits.
+# ThrottleInterval is 10 s, so the wait covers one throttled start
+launchd_restart_in_place() {
+    old_pid="$(launchd_job_pid)" || {
         echo 'ios 6 launchd socket is absent, Shiro will start after a full device reboot'
-    fi
+        return 0
+    }
+    kill -TERM "$old_pid" 2>/dev/null || true
+    attempt=0
+    while [ "$attempt" -lt 20 ]; do
+        pid="$(launchd_job_pid)" || pid=
+        case "$pid" in
+            ''|"$old_pid") ;;
+            *) [ -S /var/run/shiro/control.sock ] && { echo "ios 6 launchd socket is absent, KeepAlive restarted shirod as pid $pid"; return 0; } ;;
+        esac
+        attempt=$((attempt + 1))
+        sleep 1
+    done
+    echo 'ios 6 launchd socket is absent and KeepAlive did not bring shirod back, see /var/log/shiro-launch.log' >&2
+}
+if launchd_socket_lost; then
+    launchd_restart_in_place
 else
-    if launchd_loaded; then launchctl_cmd unload "$plist"; fi
-    launchctl_cmd load -w "$plist"
-    launchd_loaded || { echo 'shirod was not registered with launchd' >&2; exit 1; }
+    launchd_stop || exit 1
+    launchd_load_and_kick || { echo "launchd did not load $plist (${LAUNCHD_LAST_ERROR:-no launchctl output})" >&2; exit 1; }
 fi
 uicache=${jbroot}/usr/bin/uicache
 [ -x "$uicache" ] || uicache=/usr/bin/uicache

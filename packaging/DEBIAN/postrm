@@ -23,8 +23,11 @@ for dir in /Library/MobileSubstrate/DynamicLibraries /usr/lib/TweakInject /var/j
     shiro_status_remove "$dir"
 done
 if [ -f /Applications/Shiro.app/.shiro-managed ]; then rm -rf /Applications/Shiro.app; fi
-if [ -L /Library/LaunchDaemons/com.shiro.shirod.plist ]; then
-    target=$(readlink /Library/LaunchDaemons/com.shiro.shirod.plist)
-    if [ "$target" = /var/jb/Library/LaunchDaemons/com.shiro.shirod.plist ]; then rm -f /Library/LaunchDaemons/com.shiro.shirod.plist; fi
+plist=/Library/LaunchDaemons/com.shiro.shirod.plist
+if [ -L "$plist" ]; then
+    target=$(readlink "$plist")
+    if [ "$target" = /var/jb/Library/LaunchDaemons/com.shiro.shirod.plist ]; then rm -f "$plist"; fi
+elif [ -f "$plist" ] && grep -q '<string>/usr/bin/shirod</string>' "$plist"; then
+    rm -f "$plist" /usr/bin/shirod
 fi
 rm -f /var/mobile/Library/Preferences/com.shiro.status.state
