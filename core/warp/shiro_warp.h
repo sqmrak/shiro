@@ -45,6 +45,11 @@ shiro_status shiro_warp_registration_body(const uint8_t public_key[SHIRO_WG_KEY_
    for an answer that is not what the API returns */
 shiro_status shiro_warp_parse_registration(const char *json, size_t len, const uint8_t private_key[SHIRO_WG_KEY_LEN], shiro_warp_identity *out);
 
+/* why a registration failed, as the short reason the app turns into a sentence. status is what the call returned and http_status the answer's code (0 when
+   there was none). Every non-OK status gets a reason, and the reasons are the stable words the app matches on: unreachable, certificate, rate limited,
+   server error, refused, bad answer, storage, proxy, missing roots, failed */
+const char *shiro_warp_registration_reason(shiro_status status, int http_status);
+
 typedef struct shiro_warp_profile {
     char signature[2][SHIRO_WARP_SIGNATURE_MAX];
 } shiro_warp_profile;

@@ -290,6 +290,35 @@ shiro_status shiro_warp_wg_config(const shiro_warp_identity *identity, shiro_war
     return shiro_wg_config_check(out);
 }
 
+const char *shiro_warp_registration_reason(shiro_status status, int http_status) {
+    switch (status) {
+    case SHIRO_E_IO:
+    case SHIRO_E_TIMEOUT:
+    case SHIRO_E_EOF:
+        return "unreachable";
+    case SHIRO_E_SECURITY:
+        return "certificate";
+    case SHIRO_E_RPC:
+        if (http_status == 429) return "rate limited";
+        if (http_status >= 500 && http_status <= 599) return "server error";
+        return "refused";
+    case SHIRO_E_MALFORMED:
+    case SHIRO_E_TRUNCATED:
+    case SHIRO_E_UNSUPPORTED:
+    case SHIRO_E_LIMIT:
+        return "bad answer";
+    case SHIRO_E_STORAGE:
+        return "storage";
+    case SHIRO_E_PROXY:
+    case SHIRO_E_PROXY_AUTH:
+        return "proxy";
+    case SHIRO_E_NOTFOUND:
+        return "missing roots";
+    default:
+        return "failed";
+    }
+}
+
 /* the /24 prefixes WARP is served from (162.159.192, 162.159.193, 162.159.195, 188.114.96 to 99, 8.6.112, 8.34.70, 8.34.146, 8.35.211, 8.39.125, 8.39.204,
    8.39.214, 8.47.69), and the ports its servers listen on */
 static const uint32_t warp_prefixes[] = {

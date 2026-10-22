@@ -64,6 +64,7 @@ typedef struct {
     /* main changes this only while the core queue is idle */
     shiro_proxy _registrationProxy;
     shiro_status _registrationProxyStatus;
+    int _registrationHTTP;
     BOOL _identityLoaded;
     /* guards what other threads read: the route and the run that is still wanted */
     NSLock *_stateLock;
@@ -405,6 +406,7 @@ static void ShiroTimestamp(char out[32]) {
 
 /* makes the account on the first start. The trust is the bundled roots alone: the system store of an old iOS lacks today's, and the call carries the key */
 - (shiro_status)registerIdentity {
+    _registrationHTTP = 0;
     if (_registrationProxyStatus != SHIRO_OK) return _registrationProxyStatus;
     NSString *rootsPath = @"/var/jb/Applications/Shiro.app/roots.pem";
     NSData *roots = rootsPath ? [NSData dataWithContentsOfFile:rootsPath] : nil;
@@ -448,6 +450,7 @@ static void ShiroTimestamp(char out[32]) {
               (unsigned long long)(shiro_system_clock.monotonic_ms(NULL) - started), response.status);
         if (status == SHIRO_OK || (status != SHIRO_E_IO && status != SHIRO_E_TIMEOUT)) break;
     }
+    _registrationHTTP = response.status;
     if (status != SHIRO_OK) goto done;
     if (response.status < 200 || response.status > 299) {
         NSLog(@"shiro: the registration call answered %d", response.status);
@@ -475,8 +478,10 @@ done:
             dispatch_async(dispatch_get_main_queue(), ^{ [self registeringRun:run]; });
             status = [self registerIdentity];
             if (status != SHIRO_OK) {
-                NSString *message = [NSString stringWithFormat:@"WARP registration failed: %s", shiro_status_name(status)];
-                NSLog(@"shiro: %@", message);
+                /* the app words this; the exact status and HTTP code stay in the log */
+                const char *reason = _registrationProxyStatus != SHIRO_OK ? "invalid proxy" : shiro_warp_registration_reason(status, _registrationHTTP);
+                NSString *message = [NSString stringWithFormat:@"warp registration: %s", reason];
+                NSLog(@"shiro: %@ (%s, HTTP %d)", message, shiro_status_name(status), _registrationHTTP);
                 dispatch_async(dispatch_get_main_queue(), ^{
                     if (run != _run) return;
                     [_lastError release]; _lastError = [message copy];

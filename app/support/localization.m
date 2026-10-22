@@ -644,6 +644,17 @@ static void ShiroBuildTranslations(void) {
     ShiroAddTranslation(@"The tunnel stopped right after it started. Open System Logs for the reason.", @"Туннель остановился сразу после запуска. Причина — в «Системных логах».");
     ShiroAddTranslation(@"This server uses a protocol or security mode that Shiro does not support.", @"Этот сервер использует протокол или режим защиты, который Shiro не поддерживает.");
     ShiroAddTranslation(@"The server link has an invalid UUID. Import the link again from its source.", @"В ссылке сервера неверный UUID. Импортируйте ссылку заново из источника.");
+    ShiroAddTranslation(@"Could not reach Cloudflare to create the WARP account. Check the internet connection and press the power button to try again.", @"Не удалось связаться с Cloudflare, чтобы создать аккаунт WARP. Проверьте интернет и нажмите кнопку питания, чтобы попробовать ещё раз.");
+    ShiroAddTranslation(@"The connection to Cloudflare was refused as insecure. Check the date on this device and press the power button to try again.", @"Соединение с Cloudflare отклонено как небезопасное. Проверьте дату на устройстве и нажмите кнопку питания, чтобы попробовать ещё раз.");
+    ShiroAddTranslation(@"Cloudflare is limiting new WARP accounts right now. Wait a minute and press the power button to try again.", @"Cloudflare сейчас ограничивает создание новых аккаунтов WARP. Подождите минуту и нажмите кнопку питания, чтобы попробовать ещё раз.");
+    ShiroAddTranslation(@"Cloudflare had a problem creating the WARP account. Wait a minute and press the power button to try again.", @"У Cloudflare возникла проблема при создании аккаунта WARP. Подождите минуту и нажмите кнопку питания, чтобы попробовать ещё раз.");
+    ShiroAddTranslation(@"Cloudflare refused to create the WARP account. Press the power button to try again, or set a registration proxy in Settings.", @"Cloudflare отказал в создании аккаунта WARP. Нажмите кнопку питания, чтобы попробовать ещё раз, или задайте прокси для регистрации в настройках.");
+    ShiroAddTranslation(@"Cloudflare sent an answer Shiro could not read. Press the power button to try again.", @"Cloudflare прислал ответ, который Shiro не смог прочитать. Нажмите кнопку питания, чтобы попробовать ещё раз.");
+    ShiroAddTranslation(@"The WARP account was created but could not be saved on this device. Free some space and press the power button to try again.", @"Аккаунт WARP создан, но не сохранился на устройстве. Освободите место и нажмите кнопку питания, чтобы попробовать ещё раз.");
+    ShiroAddTranslation(@"The registration proxy refused the connection. Check it in Settings and press the power button to try again.", @"Прокси для регистрации отклонил соединение. Проверьте его в настройках и нажмите кнопку питания, чтобы попробовать ещё раз.");
+    ShiroAddTranslation(@"The registration proxy address is invalid. Fix or clear it in Settings, then press the power button to try again.", @"Адрес прокси для регистрации неверный. Исправьте или очистите его в настройках и нажмите кнопку питания, чтобы попробовать ещё раз.");
+    ShiroAddTranslation(@"The certificate bundle of Shiro is missing. Reinstall Shiro, then press the power button to try again.", @"Не найден набор сертификатов Shiro. Переустановите Shiro и нажмите кнопку питания, чтобы попробовать ещё раз.");
+    ShiroAddTranslation(@"The WARP account could not be created. Press the power button to try again, and open System Logs if it keeps failing.", @"Не удалось создать аккаунт WARP. Нажмите кнопку питания, чтобы попробовать ещё раз. Если не помогает, откройте системные логи.");
     ShiroAddTranslation(@"The connection attempt timed out. Check the network and try another server.", @"Время ожидания подключения истекло. Проверьте сеть и попробуйте другой сервер.");
     ShiroAddTranslation(@"The Shiro service is not responding. Restart it and try again.", @"Служба Shiro не отвечает. Перезапустите её и повторите попытку.");
     ShiroAddTranslation(@"The server port is reachable, but the profile could not complete a real connection. Check its UUID or password, security, SNI, and transport settings.", @"Порт сервера доступен, но профиль не смог установить настоящее соединение. Проверьте UUID или пароль, защиту, SNI и транспорт.");
@@ -1291,6 +1302,17 @@ static void ShiroBuildTranslations(void) {
     ShiroAddChineseTranslation(@"The Shiro service is not responding. Restart it and try again.", @"Shiro 服务没有响应。请重启后重试。");
     ShiroAddChineseTranslation(@"The clipboard is empty.", @"剪贴板为空。");
     ShiroAddChineseTranslation(@"The connect hook could not start. Check that shirotlsfix is installed, or pick another backend.", @"连接钩子无法启动。请检查是否已安装 shirotlsfix，或选择其他后端。");
+    ShiroAddChineseTranslation(@"Could not reach Cloudflare to create the WARP account. Check the internet connection and press the power button to try again.", @"无法连接 Cloudflare 创建 WARP 账户。请检查网络，然后点按电源按钮重试。");
+    ShiroAddChineseTranslation(@"The connection to Cloudflare was refused as insecure. Check the date on this device and press the power button to try again.", @"与 Cloudflare 的连接因不安全而被拒绝。请检查设备日期，然后点按电源按钮重试。");
+    ShiroAddChineseTranslation(@"Cloudflare is limiting new WARP accounts right now. Wait a minute and press the power button to try again.", @"Cloudflare 目前限制创建新的 WARP 账户。请等待一分钟，然后点按电源按钮重试。");
+    ShiroAddChineseTranslation(@"Cloudflare had a problem creating the WARP account. Wait a minute and press the power button to try again.", @"Cloudflare 创建 WARP 账户时出现问题。请等待一分钟，然后点按电源按钮重试。");
+    ShiroAddChineseTranslation(@"Cloudflare refused to create the WARP account. Press the power button to try again, or set a registration proxy in Settings.", @"Cloudflare 拒绝创建 WARP 账户。请点按电源按钮重试，或在设置中配置注册代理。");
+    ShiroAddChineseTranslation(@"Cloudflare sent an answer Shiro could not read. Press the power button to try again.", @"Cloudflare 返回了 Shiro 无法读取的响应。请点按电源按钮重试。");
+    ShiroAddChineseTranslation(@"The WARP account was created but could not be saved on this device. Free some space and press the power button to try again.", @"WARP 账户已创建，但无法保存到此设备。请释放存储空间，然后点按电源按钮重试。");
+    ShiroAddChineseTranslation(@"The registration proxy refused the connection. Check it in Settings and press the power button to try again.", @"注册代理拒绝了连接。请在设置中检查，然后点按电源按钮重试。");
+    ShiroAddChineseTranslation(@"The registration proxy address is invalid. Fix or clear it in Settings, then press the power button to try again.", @"注册代理地址无效。请在设置中修正或清除，然后点按电源按钮重试。");
+    ShiroAddChineseTranslation(@"The certificate bundle of Shiro is missing. Reinstall Shiro, then press the power button to try again.", @"缺少 Shiro 的证书包。请重新安装 Shiro，然后点按电源按钮重试。");
+    ShiroAddChineseTranslation(@"The WARP account could not be created. Press the power button to try again, and open System Logs if it keeps failing.", @"无法创建 WARP 账户。请点按电源按钮重试；若仍失败，请查看系统日志。");
     ShiroAddChineseTranslation(@"The connection attempt timed out. Check the network and try another server.", @"连接超时。请检查网络并尝试其他服务器。");
     ShiroAddChineseTranslation(@"The daemon runs these on its own, with the app closed.", @"即使应用关闭，守护进程也会自动执行这些操作。");
     ShiroAddChineseTranslation(@"The file is empty or could not be read.", @"文件为空或无法读取。");
@@ -1626,6 +1648,28 @@ NSString *ShiroHumanReadableError(NSString *text) {
         message = @"The Happ crypt5 bundle on this page could not be opened. It is either damaged or sealed with a key this build does not carry.";
     else if ([raw hasPrefix:@"this address opens a web page"])
         message = @"This address opens a web page instead of a subscription feed. Copy the subscription link the page offers, not the page address.";
+    else if ([raw isEqualToString:@"warp registration: unreachable"])
+        message = @"Could not reach Cloudflare to create the WARP account. Check the internet connection and press the power button to try again.";
+    else if ([raw isEqualToString:@"warp registration: certificate"])
+        message = @"The connection to Cloudflare was refused as insecure. Check the date on this device and press the power button to try again.";
+    else if ([raw isEqualToString:@"warp registration: rate limited"])
+        message = @"Cloudflare is limiting new WARP accounts right now. Wait a minute and press the power button to try again.";
+    else if ([raw isEqualToString:@"warp registration: server error"])
+        message = @"Cloudflare had a problem creating the WARP account. Wait a minute and press the power button to try again.";
+    else if ([raw isEqualToString:@"warp registration: refused"])
+        message = @"Cloudflare refused to create the WARP account. Press the power button to try again, or set a registration proxy in Settings.";
+    else if ([raw isEqualToString:@"warp registration: bad answer"])
+        message = @"Cloudflare sent an answer Shiro could not read. Press the power button to try again.";
+    else if ([raw isEqualToString:@"warp registration: storage"])
+        message = @"The WARP account was created but could not be saved on this device. Free some space and press the power button to try again.";
+    else if ([raw isEqualToString:@"warp registration: proxy"])
+        message = @"The registration proxy refused the connection. Check it in Settings and press the power button to try again.";
+    else if ([raw isEqualToString:@"warp registration: invalid proxy"])
+        message = @"The registration proxy address is invalid. Fix or clear it in Settings, then press the power button to try again.";
+    else if ([raw isEqualToString:@"warp registration: missing roots"])
+        message = @"The certificate bundle of Shiro is missing. Reinstall Shiro, then press the power button to try again.";
+    else if ([raw hasPrefix:@"warp registration:"])
+        message = @"The WARP account could not be created. Press the power button to try again, and open System Logs if it keeps failing.";
     else if ([raw isEqualToString:@"connect timeout"] || [raw isEqualToString:@"switch timeout"])
         message = @"The connection attempt timed out. Check the network and try another server.";
     else if ([raw hasPrefix:@"daemon offline"] || [raw isEqualToString:@"daemon offline"])

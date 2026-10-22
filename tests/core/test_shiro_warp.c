@@ -264,7 +264,25 @@ static void profile_and_endpoints(void) {
     CHECK_EQ_INT(shiro_warp_endpoint(&id, 0, &ip, &port), SHIRO_E_ARG);
 }
 
+static void registration_reasons(void) {
+    static const struct { shiro_status status; int http; const char *reason; } v[] = {
+        {SHIRO_E_IO, 0, "unreachable"},       {SHIRO_E_TIMEOUT, 0, "unreachable"},   {SHIRO_E_EOF, 0, "unreachable"},
+        {SHIRO_E_SECURITY, 0, "certificate"}, {SHIRO_E_RPC, 429, "rate limited"},    {SHIRO_E_RPC, 500, "server error"},
+        {SHIRO_E_RPC, 599, "server error"},   {SHIRO_E_RPC, 403, "refused"},         {SHIRO_E_RPC, 0, "refused"},
+        {SHIRO_E_RPC, 600, "refused"},        {SHIRO_E_MALFORMED, 200, "bad answer"}, {SHIRO_E_TRUNCATED, 200, "bad answer"},
+        {SHIRO_E_LIMIT, 200, "bad answer"},   {SHIRO_E_STORAGE, 200, "storage"},     {SHIRO_E_PROXY, 0, "proxy"},
+        {SHIRO_E_PROXY_AUTH, 407, "proxy"},   {SHIRO_E_NOTFOUND, 0, "missing roots"}, {SHIRO_E_NOMEM, 0, "failed"},
+        {SHIRO_E_CRYPTO, 0, "failed"}};
+    size_t i;
+    for (i = 0; i < sizeof(v) / sizeof(v[0]); ++i) CHECK(strcmp(shiro_warp_registration_reason(v[i].status, v[i].http), v[i].reason) == 0);
+    /* a code on a call that did not fail with RPC changes nothing */
+    CHECK(strcmp(shiro_warp_registration_reason(SHIRO_E_IO, 429), "unreachable") == 0);
+    /* an unknown status still has a reason */
+    CHECK(strcmp(shiro_warp_registration_reason((shiro_status)-99, 0), "failed") == 0);
+}
+
 int main(void) {
+    registration_reasons();
     base64_vectors();
     base64_rejections();
     ipv4_parsing();
