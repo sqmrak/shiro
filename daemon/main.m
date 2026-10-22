@@ -157,7 +157,9 @@ static void *serve(void *context) {
     }
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    /* lets the installer see whether the kernel kills the binary at exec, without starting the daemon */
+    if (argc == 2 && strcmp(argv[1], "--probe") == 0) { puts("shirod"); return 0; }
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     if (geteuid() != 0) { fprintf(stderr, "shirod requires root\n"); return 1; }
     umask(0077);
