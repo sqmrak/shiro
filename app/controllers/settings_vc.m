@@ -32,7 +32,7 @@
 }
 - (NSArray *)rows:(NSInteger)section {
     if (section == 0) return [NSArray arrayWithObjects:@"Connect at startup", @"Reconnect automatically", @"Try another server", @"Reconnect attempts", nil];
-    if (section == 1) return [NSArray arrayWithObjects:@"Theme", @"Falling foxes", @"Language", @"Statistics", @"System Logs", @"Backup", nil];
+    if (section == 1) return [NSArray arrayWithObjects:@"Theme", @"Falling foxes", @"Language", @"System Logs", @"Backup", nil];
     if (section == 2) return [NSArray arrayWithObjects:@"DNS", @"Registration proxy", @"About", nil];
     return [NSArray arrayWithObject:@"Developer settings"];
 }
@@ -140,7 +140,7 @@
     cell.textLabel.font = ShiroFontBody(16, NO); cell.detailTextLabel.font = ShiroFontBody(15, NO);
     ShiroStyleGroupCell(cell, index, [self rows:index.section].count);
     NSString *name = [[self rows:index.section] objectAtIndex:index.row];
-    NSDictionary *glyphs = [NSDictionary dictionaryWithObjectsAndKeys:@"rocket", @"Connect at startup", @"reconnect", @"Reconnect automatically", @"shuffle", @"Try another server", @"repeat", @"Reconnect attempts", @"palette", @"Theme", @"shuffle", @"Falling foxes", @"globe", @"Language", @"chart", @"Statistics", @"logs", @"System Logs", @"backup", @"Backup", @"shield", @"DNS", @"globe", @"Registration proxy", @"info", @"About", @"code", @"Developer settings", nil];
+    NSDictionary *glyphs = [NSDictionary dictionaryWithObjectsAndKeys:@"rocket", @"Connect at startup", @"reconnect", @"Reconnect automatically", @"shuffle", @"Try another server", @"repeat", @"Reconnect attempts", @"palette", @"Theme", @"shuffle", @"Falling foxes", @"globe", @"Language", @"logs", @"System Logs", @"backup", @"Backup", @"shield", @"DNS", @"globe", @"Registration proxy", @"info", @"About", @"code", @"Developer settings", nil];
     cell.textLabel.text = ShiroLocalizedText(name);
     cell.textLabel.font = ShiroFontBody(16, NO);
     cell.imageView.image = TintedIconNamed([NSString stringWithFormat:@"glyph-%@.png", [glyphs objectForKey:name]], 22, kInk);
@@ -192,7 +192,6 @@
         UIAlertView *alert = [[[UIAlertView alloc] initWithTitle:ShiroLocalizedText(@"Theme") message:nil delegate:self cancelButtonTitle:ShiroLocalizedText(@"Cancel") otherButtonTitles:ShiroLocalizedText(@"Light"), ShiroLocalizedText(@"Dark"), nil] autorelease];
         alert.tag = 103; [alert show];
     }
-    else if ([name isEqualToString:@"Statistics"]) next = [[[ShiroStatisticsController alloc] init] autorelease];
     else if ([name isEqualToString:@"System Logs"]) next = [[[ShiroLogsController alloc] init] autorelease];
     else if ([name isEqualToString:@"DNS"]) next = [[[ShiroRoutingVC alloc] initWithControl:_ctl] autorelease];
     else if ([name isEqualToString:@"Registration proxy"]) [self editRegistrationProxy];
