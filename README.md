@@ -15,104 +15,68 @@
 - arm64: ios 7 and later
 - arm64e: ios 14 and later
 
-these are the binary deployment targets.
-
 ## protocol
 
-- cloudflare warp over wireguard
-- system tunnel through utun
-- automatic account registration on the first connection
-- account keys stored by the root daemon
-- registration over TLS 1.2 or newer, with bundled roots and certificate hostname checks
+- cloudflare warp over wireguard, system tunnel through utun
+- the account is registered on the first connection and its keys stay with the root daemon
+- registration runs over TLS 1.2 or newer with bundled roots and hostname checks
+- if registration fails, the app says why and asks to try again
 
 ## routing
 
 - settings, DNS: direct and blocked IPv4 networks, tunnel DNS
-- unmatched IPv4 traffic uses WARP
 - rules use network/prefix, for example `192.168.0.0/16`
-- disconnect before changing rules or DNS
-- IPv6 is blocked while the tunnel is active
+- unmatched IPv4 traffic uses WARP, IPv6 is blocked while the tunnel is active
+- disconnect before changing rules, DNS or the registration proxy
 
 ## registration proxy
 
-settings, advanced, registration proxy: enter a SOCKS5 or HTTP CONNECT URL.
+settings, advanced, registration proxy: a SOCKS5 or HTTP CONNECT URL, empty to disable.
 
 ```text
-socks5://host:1080
 socks5://user:password@host:1080
 http://host:8080
-http://user:password@host:8080
 ```
 
-disconnect before changing the proxy. leave the field empty to disable it. percent-encode reserved characters in the login and password.
-
-the proxy resolves the API hostname and carries the registration request. TLS still verifies Cloudflare's certificate. credentials stay in a root-owned file and are omitted from diagnostics and settings backups.
-
-the WARP tunnel uses direct UDP after registration. its endpoints must be reachable from the device's network.
+the proxy carries only the registration request. TLS still verifies Cloudflare's certificate, and the login stays in a root-owned file, out of diagnostics and backups. after registration the tunnel uses direct UDP, so its endpoints must be reachable.
 
 ## features
 
 - connect at startup, automatic reconnect and endpoint failover
 - traffic counters and connection statistics
-- light and dark raspberry palettes, with a system theme picker
+- material expressive interface, light and dark
 - falling foxes, with an off switch
 - english, russian and chinese
-- logs in the app, with source filters, search, copy and sharing where available
-- app crash reports and safe mode after repeated launch failures
+- logs in the app with filters, search, copy and sharing
+- crash reports and safe mode after repeated launch failures
 - routing and DNS backup through the clipboard
 
-the VPN badge uses a SpringBoard extension loaded by MobileSubstrate or a compatible injector. restart SpringBoard after installation to load it.
+the VPN badge needs a SpringBoard extension loaded by MobileSubstrate or a compatible injector. restart SpringBoard after installation.
 
 ## install
 
-use the deb from `build/`:
+repo: `https://sqmrak.github.io/sqmrakdev/`
 
 ```bash
-scp -O build/shiro-1.1.0-stable.deb root@<device-ip>:/var/mobile/
-ssh root@<device-ip> 'dpkg -i /var/mobile/shiro-1.1.0-stable.deb'
+scp -O shiro-*.deb root@<device-ip>:/var/mobile/
+ssh root@<device-ip> dpkg -i /var/mobile/shiro-*.deb
 ```
 
-old SSH servers may require `-o HostKeyAlgorithms=+ssh-rsa` for both commands.
+old SSH servers may need `-o HostKeyAlgorithms=+ssh-rsa`. remove: `dpkg -r com.shiro.daemon`, account keys and preferences are kept.
 
-remove: `dpkg -r com.shiro.daemon`. account keys and preferences are preserved.
-
-on ios 6 with a missing launchd socket, upgrades restart an existing daemon job through KeepAlive. a first installation without a registered job needs a device reboot.
-
-## troubleshooting
-
-if the app does not launch, the VPN badge is missing or the Wi-Fi icon disappears, reboot the device first.
-
-if the problem remains, open settings, system logs and check the app, shirod and status logs.
+on ios 6 without a launchd socket, upgrades restart the daemon through KeepAlive. a first installation needs a reboot. if the app does not launch or the badge is missing, reboot first, then check system logs in settings.
 
 ## paths
 
 - account: `/var/root/Library/Shiro/shiro.account`
 - registration proxy: `/var/root/Library/Shiro/registration.proxy`
 - control socket: `/var/run/shiro/control.sock`
-- daemon log: `/var/root/Library/Shiro/shiro.log`
-- installation log: `/var/root/Library/Shiro/install.log`
+- logs: `/var/root/Library/Shiro/shiro.log`, `install.log`
 - app log and crash reports: `/var/mobile/Library/Preferences/Shiro/`
-- status extension log: `/var/mobile/Library/Preferences/com.shiro.status.log`
-- packaged app: `/var/jb/Applications/Shiro.app`
-- rootful app copy: `/Applications/Shiro.app`
-
-## source tree
-
-- `app/`: UIKit interface, themes and localization
-- `common/`: local control interface shared by the app and daemon
-- `core/`: portable C networking, wireguard and routing logic
-- `daemon/`: privileged tunnel, account storage and device integration
-- `status/`: SpringBoard status bar extension
-- `assets/`, `resources/`: artwork and certificate roots
-- `packaging/`: package metadata and installation scripts
-- `scripts/`: cross builds, image generation and artifact checks
-- `tests/`: host tests and installation fixtures
-
-`build/` contains generated files and local packages and is excluded from git. SDKs, toolchains and OpenSSL builds stay outside the source tree. device accounts, proxy credentials and logs are runtime data.
 
 ## build
 
-needs an iOS cross toolchain with `clang`, `lipo`, `otool` and `ldid`, legacy armv7 and modern arm64 SDKs, static OpenSSL builds for each slice, Python 3 with Pillow, and `dpkg-deb`. host tests need a C99 compiler and OpenSSL development headers and libraries.
+needs an iOS cross toolchain (`clang`, `lipo`, `otool`, `ldid`), armv7 and arm64 SDKs, static OpenSSL for each slice, Python 3 with Pillow and `dpkg-deb`.
 
 ```bash
 export THEOS=/path/to/theos
@@ -128,15 +92,9 @@ make test
 make deb
 ```
 
-outputs `build/shiro-1.1.0-stable.deb`. the package build runs host tests, inspects the architecture slices and checks package layout, ownership, permissions and signature records.
+outputs `build/shiro-1.1.0-stable.deb` after host tests, slice inspection and package layout, ownership and signature checks. `SHIRO_TC`, `SHIRO_SDK_VE`, `SHIRO_PYTHON`, `SHIRO_LDID` and `SHIRO_HOST_CC` override the toolchain, arm64e SDK, Python, signer and host compiler.
 
-`SHIRO_TC` overrides the toolchain directory, `SHIRO_SDK_VE` overrides the arm64e SDK, `SHIRO_PYTHON` selects Python, and `SHIRO_LDID` selects the signer. `SHIRO_HOST_CC` selects the host compiler. arm64e uses the modern compiler; the other slices use the toolchain compiler.
-
-`make sanitize` runs host tests with ASan and UBSan. `make app-unsigned` builds the app bundle, and `make inspect-unsigned` builds and inspects all binaries.
-
-`make ipa` packages the app only. the root daemon and status extension are installed by the deb.
-
-`make clean` removes build intermediates and staging directories. existing DEB and IPA archives in `build/` are preserved.
+`make sanitize` runs host tests with ASan and UBSan, `make ipa` packages the app only, `make clean` keeps the archives in `build/`.
 
 ## license
 
