@@ -161,6 +161,18 @@ int main(int argc, char **argv) {
     /* lets the installer see whether the kernel kills the binary at exec, without starting the daemon */
     if (argc == 2 && strcmp(argv[1], "--probe") == 0) { puts("shirod"); return 0; }
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    if (argc == 2 && strcmp(argv[1], "--status") == 0) {
+        NSDictionary *request = [NSDictionary dictionaryWithObject:@"status" forKey:@"command"];
+        NSDictionary *reply = ShiroControlRequest(request, NULL);
+        id pid = [reply objectForKey:@"pid"];
+        int result = 1;
+        if ([pid isKindOfClass:[NSNumber class]] && [pid intValue] > 1) {
+            printf("%d\n", [pid intValue]);
+            result = 0;
+        }
+        [pool drain];
+        return result;
+    }
     if (geteuid() != 0) { fprintf(stderr, "shirod requires root\n"); return 1; }
     umask(0077);
     if ((mkdir("/var/root/Library/Shiro", 0700) != 0 && errno != EEXIST) ||
