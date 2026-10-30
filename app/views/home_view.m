@@ -564,6 +564,82 @@ static void ShiroOrbitTween(CALayer *layer, NSString *path, id from, id to, BOOL
 
 @end
 
+@interface ShiroShimmerLabel : UILabel {
+    CAGradientLayer *_paint;
+    CALayer *_mask;
+    CGSize _maskSize;
+    UIFont *_maskFont;
+    BOOL _motionRunning;
+}
+- (void)applyColors;
+- (void)setMotionRunning:(BOOL)running;
+@end
+
+@implementation ShiroShimmerLabel
+- (id)initWithFrame:(CGRect)frame {
+    if ((self = [super initWithFrame:frame])) {
+        _paint = [[CAGradientLayer alloc] init];
+        _paint.startPoint = CGPointMake(0, 0.5f);
+        _paint.endPoint = CGPointMake(1, 0.5f);
+        _mask = [[CALayer alloc] init];
+        self.layer.mask = _mask;
+        [self.layer addSublayer:_paint];
+        [self applyColors];
+    }
+    return self;
+}
+- (void)dealloc {
+    [_paint release];
+    [_mask release];
+    [_maskFont release];
+    [super dealloc];
+}
+- (void)drawTextInRect:(CGRect)rect { (void)rect; }
+- (void)applyColors {
+    UIColor *rose = ShiroThemeIsLight() ? [UIColor colorWithRed:0.74f green:0.06f blue:0.32f alpha:1] : kAccentBlue;
+    UIColor *pink = ShiroThemeIsLight() ? [UIColor colorWithRed:0.88f green:0.22f blue:0.45f alpha:1] : [UIColor colorWithRed:1 green:0.49f blue:0.66f alpha:1];
+    UIColor *mauve = ShiroThemeIsLight() ? [UIColor colorWithRed:0.57f green:0.22f blue:0.48f alpha:1] : [UIColor colorWithRed:0.85f green:0.60f blue:0.84f alpha:1];
+    _paint.colors = [NSArray arrayWithObjects:(id)rose.CGColor, (id)pink.CGColor, (id)mauve.CGColor, (id)rose.CGColor, (id)pink.CGColor, (id)mauve.CGColor, (id)rose.CGColor, nil];
+}
+- (void)syncMotion {
+    [_paint removeAnimationForKey:@"shiro.wordmark.slide"];
+    CGFloat width = self.bounds.size.width;
+    if (!_motionRunning || !self.window || ShiroReduceMotion() || width < 1.0f) return;
+    CABasicAnimation *slide = [CABasicAnimation animationWithKeyPath:@"position.x"];
+    slide.fromValue = [NSNumber numberWithFloat:(float)width];
+    slide.toValue = [NSNumber numberWithFloat:0];
+    slide.duration = 5.0;
+    slide.repeatCount = HUGE_VALF;
+    slide.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
+    [_paint addAnimation:slide forKey:@"shiro.wordmark.slide"];
+}
+- (void)setMotionRunning:(BOOL)running { _motionRunning = running; [self syncMotion]; }
+- (void)didMoveToWindow { [super didMoveToWindow]; [self syncMotion]; }
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    CGSize size = self.bounds.size;
+    if (size.width < 1 || size.height < 1) return;
+    BOOL changed = !CGSizeEqualToSize(size, _maskSize) || _maskFont != self.font;
+    if (!changed) return;
+    _maskSize = size;
+    [_maskFont release];
+    _maskFont = [self.font retain];
+    UIGraphicsBeginImageContextWithOptions(size, NO, 0);
+    [super drawTextInRect:self.bounds];
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    ShiroBeginSilentLayers();
+    _paint.bounds = CGRectMake(0, 0, size.width * 2, size.height);
+    _paint.position = CGPointMake(size.width, size.height * 0.5f);
+    _mask.frame = self.bounds;
+    _mask.contents = (id)image.CGImage;
+    _mask.contentsScale = image.scale;
+    _mask.contentsGravity = kCAGravityLeft;
+    ShiroEndSilentLayers();
+    [self syncMotion];
+}
+@end
+
 static NSString * const kShiroPlateFill = @"homePlateFill";
 static NSString * const kShiroPlateSheen = @"homePlateSheen";
 
@@ -771,7 +847,10 @@ static void ShiroHomeLayoutCard(ShiroHomeView *v, BOOL isFlag);
         [self wirePress:stats];
         [self addSubview:stats];
 
-        wordmark = ShiroHomeLabel(self, NSTextAlignmentCenter);
+        wordmark = [[[ShiroShimmerLabel alloc] initWithFrame:CGRectZero] autorelease];
+        wordmark.textAlignment = NSTextAlignmentCenter;
+        wordmark.backgroundColor = [UIColor clearColor];
+        [self addSubview:wordmark];
         wordmark.text = @"shiro";
         tagline = ShiroHomeLabel(self, NSTextAlignmentCenter);
         tagline.adjustsFontSizeToFitWidth = YES;
@@ -823,6 +902,7 @@ static void ShiroHomeLayoutCard(ShiroHomeView *v, BOOL isFlag);
            forState:UIControlStateNormal];
 
     ShiroHomePlainLabel(wordmark, kAccentBlue);
+    [(ShiroShimmerLabel *)wordmark applyColors];
     ShiroHomePlainLabel(tagline, kInkMuted);
     ShiroHomePlainLabel(state, kInk);
     ShiroHomePlainLabel(serverTitle, kInk);
@@ -853,6 +933,10 @@ static void ShiroHomeLayoutCard(ShiroHomeView *v, BOOL isFlag);
     protocolLine.text = text;
     protocolLine.hidden = ![text length];
     protocolDot.hidden = protocolLine.hidden;
+}
+
+- (void)setMotionRunning:(BOOL)running {
+    [(ShiroShimmerLabel *)wordmark setMotionRunning:running];
 }
 
 static void ShiroHomeLayoutCard(ShiroHomeView *v, BOOL isFlag) {

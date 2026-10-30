@@ -66,6 +66,7 @@
                 isFlag:(BOOL)isFlag;
 - (void)relocalize;
 - (void)setProtocolLine:(NSString *)text;
+- (void)setMotionRunning:(BOOL)running;
 @end
 
 /* the rounded card every home and picker control sits on: list colours lit

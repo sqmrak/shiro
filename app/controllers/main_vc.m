@@ -78,6 +78,7 @@
     if (falling) [_foxes start]; else [_foxes stop];
     if (_timer) return;
     [_home->power setRunning:YES];
+    [_home setMotionRunning:YES];
     _timer = [[NSTimer scheduledTimerWithTimeInterval:2 target:self selector:@selector(refresh) userInfo:nil repeats:YES] retain];
     [self refresh];
 }
@@ -86,6 +87,7 @@
     [_foxes setPaused:YES];
     [_timer invalidate]; [_timer release]; _timer = nil;
     [_home->power setRunning:NO];
+    [_home setMotionRunning:NO];
 }
 - (void)refresh { [self command:@"status"]; }
 - (void)command:(NSString *)command {
