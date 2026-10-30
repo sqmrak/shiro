@@ -18,7 +18,8 @@ find "$stage" -type f -exec chmod 644 {} +
 chmod 755 "$stage/Payload/Shiro.app/Shiro"
 "$signer" -Spackaging/app-entitlements.plist "$stage/Payload/Shiro.app/Shiro"
 version=$(python3 -c 'import plistlib; print(plistlib.load(open("packaging/Info.plist", "rb"))["CFBundleShortVersionString"])')
-output="Shiro-${version}.ipa"
-rm -f "build/$output"
-(cd "$stage" && zip -q -r "../$output" Payload)
-python3 scripts/verify_ipa.py "build/$output"
+output="${SHIRO_IPA_OUTPUT:-build/Shiro-${version}.ipa}"
+output="$(python3 -c 'import os, sys; print(os.path.abspath(sys.argv[1]))' "$output")"
+rm -f "$output"
+(cd "$stage" && zip -q -r "$output" Payload)
+python3 scripts/verify_ipa.py "$output"

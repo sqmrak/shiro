@@ -31,5 +31,6 @@ else
     "$signer" -S "$stage/var/jb/usr/lib/shirostatus.dylib"
     "$signer" -S "$stage/var/jb/usr/lib/shirostatus-modern.dylib"
 fi
+output="${SHIRO_PACKAGE_OUTPUT:-$output}"
 dpkg-deb --root-owner-group -Zgzip --build "$stage" "$output"
 python3 scripts/verify_package.py "$output" "$mode"
