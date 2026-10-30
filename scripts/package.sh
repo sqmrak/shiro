@@ -20,9 +20,9 @@ cp packaging/com.shiro.shirod.plist "$stage/var/jb/Library/LaunchDaemons/"
 find "$stage" -type d -exec chmod 755 {} +
 find "$stage" -type f -exec chmod 644 {} +
 chmod 755 "$stage/DEBIAN/postinst" "$stage/DEBIAN/prerm" "$stage/DEBIAN/postrm" "$stage/var/jb/Applications/Shiro.app/Shiro" "$stage/var/jb/usr/bin/shirod" "$stage/var/jb/usr/lib/"*.dylib
-output="build/shiro-${version}.deb"
+output="build/shiro-v${version}.deb"
 if [[ "$mode" == --unsigned ]]; then
-    output="build/shiro-${version}-unsigned.deb"
+    output="build/shiro-v${version}-unsigned.deb"
 else
     signer="${SHIRO_LDID:-${SHIRO_TC:-${THEOS:?set THEOS or SHIRO_LDID}/toolchain/linux/iphone/bin}/ldid}"
     [[ -x "$signer" ]] || { echo 'missing SHIRO_LDID signer' >&2; exit 1; }

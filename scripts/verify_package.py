@@ -31,7 +31,10 @@ with tarfile.open(fileobj=io.BytesIO(payload)) as archive:
     assert info['UIAppFonts'] == fonts
     for font in fonts + ['Rubik-LICENSE.txt']:
         assert entries[f'{root}/Applications/Shiro.app/{font}'].size > 0
-    assert info['CFBundleShortVersionString'] == subprocess.check_output(['dpkg-deb', '-f', package, 'Version'], text=True).strip()
+    version = subprocess.check_output(['dpkg-deb', '-f', package, 'Version'], text=True).strip()
+    assert info['CFBundleShortVersionString'] == version
+    assert info['CFBundleVersion'] == version
+    assert f'#define SHIRO_VERSION @"v{version}"' in open('app/support/app_common.h').read()
     launch = plistlib.loads(archive.extractfile(entries[f'{root}/Library/LaunchDaemons/com.shiro.shirod.plist']).read())
     assert launch['ProgramArguments'] == ['/var/jb/usr/bin/shirod']
     assert launch.get('UserName', 'root') == 'root'

@@ -92,7 +92,7 @@ make test
 make deb
 ```
 
-outputs `build/shiro-1.1.0-stable.deb` after host tests, slice inspection and package layout, ownership and signature checks. `SHIRO_TC`, `SHIRO_SDK_VE`, `SHIRO_PYTHON`, `SHIRO_LDID` and `SHIRO_HOST_CC` override the toolchain, arm64e SDK, Python, signer and host compiler.
+outputs `build/shiro-v1.2.0-stable.deb` after host tests, slice inspection and package layout, ownership and signature checks. `SHIRO_TC`, `SHIRO_SDK_VE`, `SHIRO_PYTHON`, `SHIRO_LDID` and `SHIRO_HOST_CC` override the toolchain, arm64e SDK, Python, signer and host compiler.
 
 `make sanitize` runs host tests with ASan and UBSan, `make ipa` packages the app only, `make clean` keeps the archives in `build/`.
 `SHIRO_PACKAGE_OUTPUT` and `SHIRO_IPA_OUTPUT` select alternative archive paths.
