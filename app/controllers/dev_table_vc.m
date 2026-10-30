@@ -144,14 +144,14 @@
     cell.accessoryView = nil;
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
     cell.selectedBackgroundView = nil;
-    cell.textLabel.font = [UIFont boldSystemFontOfSize:15.0f];
+    cell.textLabel.font = ShiroFontBody(15.0, YES);
     cell.textLabel.textColor = kInk;
     cell.textLabel.shadowColor = nil;
     cell.textLabel.shadowOffset = CGSizeZero;
     cell.textLabel.numberOfLines = 1;
     cell.textLabel.lineBreakMode = NSLineBreakByTruncatingTail;
     cell.textLabel.backgroundColor = [UIColor clearColor];
-    cell.detailTextLabel.font = [UIFont systemFontOfSize:13.0f];
+    cell.detailTextLabel.font = ShiroFontBody(13.0, NO);
     cell.detailTextLabel.textColor = kInkMuted;
     cell.detailTextLabel.shadowColor = nil;
     cell.detailTextLabel.shadowOffset = CGSizeZero;
@@ -202,7 +202,7 @@
 
 - (UIView *)tableView:(UITableView *)tv viewForHeaderInSection:(NSInteger)s {
     return [self devTextViewWithText:[self devHeaderForSection:s]
-                                font:[UIFont boldSystemFontOfSize:13.0f]
+                                font:ShiroFontBody(13.0, YES)
                               height:28.0f
                                width:tv.bounds.size.width
                             centered:YES];
@@ -213,13 +213,13 @@
     if (![text length]) return 18.0f;
     CGFloat width = tv.bounds.size.width - 40.0f;
     if (width < 120.0f) width = 120.0f;
-    CGSize size = ShiroTextSize(text, [UIFont systemFontOfSize:12.0f], width);
+    CGSize size = ShiroTextSize(text, ShiroFontBody(12.0, NO), width);
     return MAX(44.0f, size.height + 24.0f);
 }
 
 - (UIView *)tableView:(UITableView *)tv viewForFooterInSection:(NSInteger)s {
     return [self devTextViewWithText:[self devFooterForSection:s]
-                                font:[UIFont systemFontOfSize:12.0f]
+                                font:ShiroFontBody(12.0, NO)
                               height:[self tableView:tv heightForFooterInSection:s]
                                width:tv.bounds.size.width
                             centered:YES];

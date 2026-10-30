@@ -53,12 +53,13 @@ endef
 $(eval $(call rules,armv7,$(V7),$(if $(SHIRO_CRT_V7),-nostartfiles $(SHIRO_CRT_V7),),$(SHIRO_OPENSSL_V7)))
 $(eval $(call rules,arm64,$(V64),,$(SHIRO_OPENSSL_V64)))
 $(eval $(call rules,arm64e-modern,$(VE),,$(SHIRO_OPENSSL_VE),$(SHIRO_MODERN_CC)))
-$(B)/Shiro.app/Shiro: $(B)/arm64e-modern/Shiro $(B)/armv7/Shiro $(B)/arm64/Shiro packaging/Info.plist scripts/icons.py $(wildcard assets/*.png assets/*.jpg resources/shiro/*.pem)
+$(B)/Shiro.app/Shiro: $(B)/arm64e-modern/Shiro $(B)/armv7/Shiro $(B)/arm64/Shiro packaging/Info.plist scripts/icons.py $(wildcard assets/*.png assets/*.jpg resources/shiro/*.pem resources/fonts/*)
 	rm -rf $(B)/Shiro.app
 	mkdir -p $(B)/Shiro.app
 	'$(SHIRO_TC)/lipo' -create $(B)/armv7/Shiro $(B)/arm64/Shiro $(B)/arm64e-modern/Shiro -output $@
 	cp packaging/Info.plist $(B)/Shiro.app/
 	cp resources/shiro/*.pem assets/shiro_fox.png LICENSE $(B)/Shiro.app/
+	cp resources/fonts/Rubik-*.ttf resources/fonts/Rubik-LICENSE.txt $(B)/Shiro.app/
 	cp assets/glyph-*.png assets/sqmrak.jpg assets/qwertyu1opz.png assets/cloudflare.png $(B)/Shiro.app/
 	$(SHIRO_PYTHON) scripts/icons.py
 $(B)/shirod: $(B)/armv7/shirod $(B)/arm64/shirod $(B)/arm64e-modern/shirod

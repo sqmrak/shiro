@@ -94,7 +94,7 @@
 }
 - (UIView *)tableView:(UITableView *)tv viewForFooterInSection:(NSInteger)s {
     UIView *footer = [self sectionTextViewWithText:[self devFooterForSection:s]
-                                              font:[UIFont systemFontOfSize:12.0f]
+                                              font:ShiroFontBody(12.0, NO)
                                             height:[self tableView:tv heightForFooterInSection:s]
                                              width:tv.bounds.size.width];
     return footer ? footer : [[[UIView alloc] initWithFrame:CGRectZero] autorelease];
@@ -104,7 +104,7 @@
     if (![text length]) return 10.0f;
     CGFloat width = tv.bounds.size.width - 40.0f;
     if (width < 120.0f) width = 120.0f;
-    CGSize size = ShiroTextSize(text, [UIFont systemFontOfSize:12.0f], width);
+    CGSize size = ShiroTextSize(text, ShiroFontBody(12.0, NO), width);
     return MAX(36.0f, size.height + 16.0f);
 }
 

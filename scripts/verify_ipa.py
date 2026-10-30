@@ -14,6 +14,10 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
     assert info['CFBundleExecutable'] == 'Shiro'
     assert info['CFBundleIdentifier'] == 'com.shiro.app'
     assert info['MinimumOSVersion'] == '5.0'
+    fonts = ['Rubik-Regular.ttf', 'Rubik-Medium.ttf', 'Rubik-Bold.ttf']
+    assert info['UIAppFonts'] == fonts
+    for font in fonts + ['Rubik-LICENSE.txt']:
+        assert archive.getinfo(prefix + font).file_size > 0
     source = plistlib.load(open('packaging/Info.plist', 'rb'))
     assert info['CFBundleShortVersionString'] == source['CFBundleShortVersionString']
     assert info['CFBundleVersion'] == source['CFBundleVersion']

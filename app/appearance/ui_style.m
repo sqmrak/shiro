@@ -60,50 +60,14 @@ void ShiroThemeCrossfadeWindows(void) {
                      }];
 }
 
-/* runtime lookup keeps font-weight symbols from breaking ios 5 launches */
-static UIFont *ShiroSFBold(CGFloat size) {
-    if ([UIFont respondsToSelector:@selector(systemFontOfSize:weight:)]) {
-        UIFont *f = ((UIFont * (*)(id, SEL, CGFloat, CGFloat))objc_msgSend)(
-            [UIFont class], @selector(systemFontOfSize:weight:), size, (CGFloat)0.4);
-        if (f) return f;
-    }
-    return [UIFont boldSystemFontOfSize:size];
-}
-
-static UIFont *ShiroSFSemibold(CGFloat size) {
-    if ([UIFont respondsToSelector:@selector(systemFontOfSize:weight:)]) {
-        UIFont *f = ((UIFont * (*)(id, SEL, CGFloat, CGFloat))objc_msgSend)(
-            [UIFont class], @selector(systemFontOfSize:weight:), size, (CGFloat)0.3);
-        if (f) return f;
-    }
-    return [UIFont boldSystemFontOfSize:size];
-}
-
 UIFont *ShiroFontTitle(CGFloat size) {
-    if (ShiroThemeIsIos26())
-        return ShiroSFBold(size);
-    if (ShiroThemeIsMaterial()) {
-        UIFont *medium = [UIFont fontWithName:@"HelveticaNeue-Medium" size:size];
-        return medium ? medium : [UIFont boldSystemFontOfSize:size];
-    }
-/* the flat bars put this over a light, nearly white ground, where the ultra
-   light Helvetica it used to ask for drew a grey hairline that read as a
-   disabled title on ios 10. the weight is the one the system bar uses */
-    if ([UIFont respondsToSelector:@selector(systemFontOfSize:weight:)])
-        return ShiroSFSemibold(size);
-    UIFont *medium = [UIFont fontWithName:@"HelveticaNeue-Medium" size:size];
-    return medium ? medium : [UIFont boldSystemFontOfSize:size];
+    UIFont *font = [UIFont fontWithName:@"Rubik-Medium" size:size];
+    return font ? font : [UIFont boldSystemFontOfSize:size];
 }
 
 UIFont *ShiroFontBody(CGFloat size, BOOL semibold) {
-    if (ShiroThemeIsIos26())
-        return semibold ? ShiroSFBold(size) : ShiroSFSemibold(size);
-    if (semibold) {
-        UIFont *f = [UIFont fontWithName:@"HelveticaNeue-Medium" size:size];
-        if (!f) f = [UIFont boldSystemFontOfSize:size];
-        return f;
-    }
-    return [UIFont systemFontOfSize:size];
+    UIFont *font = [UIFont fontWithName:semibold ? @"Rubik-Medium" : @"Rubik-Regular" size:size];
+    return font ? font : (semibold ? [UIFont boldSystemFontOfSize:size] : [UIFont systemFontOfSize:size]);
 }
 
 
@@ -976,36 +940,9 @@ void ShiroPressPop(UIView *view, BOOL pressed) {
     }
 }
 
-/* the header wordmark wants a geometric bold close to Rubik. no ios ships that
-   face, so the ladder walks from the roundest system face down to what ios 5
-   actually has and stops at the first one the device can create. every symbol
-   past ios 6 is resolved at runtime because the armv7 slice builds against an
-   sdk that has neither UIFontDescriptor nor the rounded design */
 UIFont *ShiroFontDisplay(CGFloat size) {
-    UIFont *base = [UIFont boldSystemFontOfSize:size];
-    SEL descSel = @selector(fontDescriptor);
-    SEL designSel = NSSelectorFromString(@"fontDescriptorWithDesign:");
-    SEL makeSel = NSSelectorFromString(@"fontWithDescriptor:size:");
-    if ([base respondsToSelector:descSel] && [UIFont respondsToSelector:makeSel]) {
-        id desc = ((id (*)(id, SEL))objc_msgSend)(base, descSel);
-        if ([desc respondsToSelector:designSel]) {
-            id rounded = ((id (*)(id, SEL, NSString *))objc_msgSend)
-                (desc, designSel, @"NSCTFontUIFontDesignRounded");
-            if (rounded) {
-                UIFont *f = ((id (*)(id, SEL, id, CGFloat))objc_msgSend)
-                    ([UIFont class], makeSel, rounded, size);
-                if (f) return f;
-            }
-        }
-    }
-    static NSString * const kFaces[] = {
-        @"AvenirNext-Bold", @"Avenir-Black", @"HelveticaNeue-Bold"
-    };
-    for (size_t i = 0; i < sizeof kFaces / sizeof kFaces[0]; ++i) {
-        UIFont *f = [UIFont fontWithName:kFaces[i] size:size];
-        if (f) return f;
-    }
-    return base;
+    UIFont *font = [UIFont fontWithName:@"Rubik-Bold" size:size];
+    return font ? font : [UIFont boldSystemFontOfSize:size];
 }
 
 /* a label lays out text the same way every screen here draws it, and it is the

@@ -27,6 +27,10 @@ with tarfile.open(fileobj=io.BytesIO(payload)) as archive:
     info = plistlib.loads(archive.extractfile(entries[f'{root}/Applications/Shiro.app/Info.plist']).read())
     assert info['MinimumOSVersion'] == '5.0'
     assert info['CFBundleIdentifier'] == 'com.shiro.app'
+    fonts = ['Rubik-Regular.ttf', 'Rubik-Medium.ttf', 'Rubik-Bold.ttf']
+    assert info['UIAppFonts'] == fonts
+    for font in fonts + ['Rubik-LICENSE.txt']:
+        assert entries[f'{root}/Applications/Shiro.app/{font}'].size > 0
     assert info['CFBundleShortVersionString'] == subprocess.check_output(['dpkg-deb', '-f', package, 'Version'], text=True).strip()
     launch = plistlib.loads(archive.extractfile(entries[f'{root}/Library/LaunchDaemons/com.shiro.shirod.plist']).read())
     assert launch['ProgramArguments'] == ['/var/jb/usr/bin/shirod']
