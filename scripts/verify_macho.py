@@ -1,4 +1,5 @@
 import struct
+import plistlib
 
 ARMV7 = (12, 9)
 ARM64 = (0x100000c, 0)
@@ -6,7 +7,7 @@ ARM64E = (0x100000c, 2)
 EXECUTABLE_TARGETS = {ARMV7: 0x50000, ARM64: 0x70000, ARM64E: 0xe0000}
 
 
-def verify_macho(binary, targets, signed=True):
+def verify_macho(binary, targets, signed=True, app_entitlements=False):
     assert binary[:4] == b'\xca\xfe\xba\xbe', 'expected a universal Mach-O'
     count = struct.unpack_from('>I', binary, 4)[0]
     assert count == len(targets), count
@@ -32,6 +33,21 @@ def verify_macho(binary, targets, signed=True):
                 sig_offset, sig_size = struct.unpack_from('<II', binary, pos + 8)
                 assert sig_size > 0 and sig_offset + sig_size <= size
                 signature = True
+                if app_entitlements:
+                    signature_data = binary[offset + sig_offset:offset + sig_offset + sig_size]
+                    magic, total, count = struct.unpack_from('>III', signature_data)
+                    assert magic == 0xfade0cc0 and total <= len(signature_data)
+                    assert 12 + count * 8 <= total
+                    entitlements = None
+                    for entry in range(count):
+                        slot, blob_offset = struct.unpack_from('>II', signature_data, 12 + entry * 8)
+                        if slot != 5:
+                            continue
+                        assert blob_offset + 8 <= total
+                        blob_magic, blob_size = struct.unpack_from('>II', signature_data, blob_offset)
+                        assert blob_magic == 0xfade7171 and blob_size >= 8 and blob_offset + blob_size <= total
+                        entitlements = plistlib.loads(signature_data[blob_offset + 8:blob_offset + blob_size])
+                    assert entitlements == {'com.apple.private.security.no-sandbox': True}, 'missing app socket entitlement'
             if cmd == 0x25:
                 minimum = struct.unpack_from('<I', binary, pos + 8)[0]
             if cmd == 0x32:

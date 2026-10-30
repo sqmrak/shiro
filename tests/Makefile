@@ -10,6 +10,7 @@ test: $(TESTS)
 	@set -e; for t in $(TESTS); do $$t; done
 	python3 test_status_install.py
 	python3 test_launchd_install.py
+	python3 test_app_signature.py
 sanitize:
 	$(MAKE) BUILD=../build/asan OPT='-O1 -fsanitize=address,undefined -fno-omit-frame-pointer' test
 $(BUILD)/%.o: ../%.c

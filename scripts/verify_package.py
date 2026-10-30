@@ -22,7 +22,8 @@ with tarfile.open(fileobj=io.BytesIO(payload)) as archive:
             targets = {ARMV7: 0x50000, ARM64: 0x70000, ARM64E: 0xc0000}
         elif name == 'usr/lib/shirostatus-modern.dylib':
             targets = {ARM64: 0x70000, ARM64E: 0xe0000}
-        verify_macho(archive.extractfile(item).read(), targets, signed=mode != '--unsigned')
+        verify_macho(archive.extractfile(item).read(), targets, signed=mode != '--unsigned',
+                     app_entitlements=mode != '--unsigned' and name == 'Applications/Shiro.app/Shiro')
     info = plistlib.loads(archive.extractfile(entries[f'{root}/Applications/Shiro.app/Info.plist']).read())
     assert info['MinimumOSVersion'] == '5.0'
     assert info['CFBundleIdentifier'] == 'com.shiro.app'

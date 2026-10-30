@@ -20,7 +20,7 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
     binary_info = archive.getinfo(prefix + 'Shiro')
     assert (binary_info.external_attr >> 16) & 0o777 == 0o755
     binary = archive.read(binary_info)
-    verify_macho(binary, EXECUTABLE_TARGETS)
+    verify_macho(binary, EXECUTABLE_TARGETS, app_entitlements=True)
     for resource in ['Icon.png', 'Icon@2x.png', 'Icon-60@3x.png', 'shiro_fox.png', 'roots.pem', 'LICENSE']:
         assert prefix + resource in names
 print(f'{sys.argv[1]}: zip, layout, executable modes, armv7/arm64/arm64e, iOS 5/7/14 targets and signature records passed')

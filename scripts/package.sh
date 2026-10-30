@@ -26,7 +26,7 @@ if [[ "$mode" == --unsigned ]]; then
 else
     signer="${SHIRO_LDID:-${SHIRO_TC:-${THEOS:?set THEOS or SHIRO_LDID}/toolchain/linux/iphone/bin}/ldid}"
     [[ -x "$signer" ]] || { echo 'missing SHIRO_LDID signer' >&2; exit 1; }
-    "$signer" -S "$stage/var/jb/Applications/Shiro.app/Shiro"
+    "$signer" -Spackaging/app-entitlements.plist "$stage/var/jb/Applications/Shiro.app/Shiro"
     "$signer" -S "$stage/var/jb/usr/bin/shirod"
     "$signer" -S "$stage/var/jb/usr/lib/shirostatus.dylib"
     "$signer" -S "$stage/var/jb/usr/lib/shirostatus-modern.dylib"

@@ -16,7 +16,7 @@ cp -R build/ios/Shiro.app "$stage/Payload/"
 find "$stage" -type d -exec chmod 755 {} +
 find "$stage" -type f -exec chmod 644 {} +
 chmod 755 "$stage/Payload/Shiro.app/Shiro"
-"$signer" -S "$stage/Payload/Shiro.app/Shiro"
+"$signer" -Spackaging/app-entitlements.plist "$stage/Payload/Shiro.app/Shiro"
 version=$(python3 -c 'import plistlib; print(plistlib.load(open("packaging/Info.plist", "rb"))["CFBundleShortVersionString"])')
 output="Shiro-${version}.ipa"
 rm -f "build/$output"
