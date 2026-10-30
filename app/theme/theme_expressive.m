@@ -7,15 +7,15 @@
    because a saturated rose vibrates on a near black surface */
 static void FillLight(void) {
     ShiroThemeSetSlot(&kBG,         ShiroThemeC(1.000, 0.973, 0.976)); /* surface */
-    ShiroThemeSetSlot(&kBGBot,      ShiroThemeC(1.000, 0.973, 0.976));
+    ShiroThemeSetSlot(&kBGBot,      ShiroThemeC(0.980, 0.937, 0.953));
     ShiroThemeSetSlot(&kFelt,       ShiroThemeC(0.992, 0.929, 0.945));
-    ShiroThemeSetSlot(&kConnOn,     ShiroThemeC(0.757, 0.000, 0.376)); /* primary */
+    ShiroThemeSetSlot(&kConnOn,     ShiroThemeC(0.737, 0.059, 0.322)); /* primary */
     ShiroThemeSetSlot(&kConnOnLo,   ShiroThemeC(0.580, 0.000, 0.280));
     ShiroThemeSetSlot(&kIdleGrey,   ShiroThemeC(0.800, 0.740, 0.760));
     ShiroThemeSetSlot(&kIdleGreyLo, ShiroThemeC(0.650, 0.580, 0.610));
     ShiroThemeSetSlot(&kInk,        ShiroThemeC(0.133, 0.098, 0.106));
     ShiroThemeSetSlot(&kInkMuted,   ShiroThemeC(0.350, 0.290, 0.310));
-    ShiroThemeSetSlot(&kAccentBlue, ShiroThemeC(0.757, 0.000, 0.376));
+    ShiroThemeSetSlot(&kAccentBlue, ShiroThemeC(0.737, 0.059, 0.322));
     ShiroThemeSetSlot(&kAccentBlueLo, ShiroThemeC(0.580, 0.000, 0.280));
     ShiroThemeSetSlot(&kChromeHi,   ShiroThemeC(0.757, 0.000, 0.376)); /* app bar */
     ShiroThemeSetSlot(&kChromeLo,   ShiroThemeC(0.580, 0.000, 0.280));
@@ -26,7 +26,7 @@ static void FillLight(void) {
 
 static void FillDark(void) {
     ShiroThemeSetSlot(&kBG,         ShiroThemeC(0.102, 0.067, 0.075)); /* surface */
-    ShiroThemeSetSlot(&kBGBot,      ShiroThemeC(0.102, 0.067, 0.075));
+    ShiroThemeSetSlot(&kBGBot,      ShiroThemeC(0.145, 0.086, 0.113));
     ShiroThemeSetSlot(&kFelt,       ShiroThemeC(0.153, 0.114, 0.125));
     ShiroThemeSetSlot(&kConnOn,     ShiroThemeC(1.000, 0.694, 0.780)); /* primary */
     ShiroThemeSetSlot(&kConnOnLo,   ShiroThemeC(0.930, 0.520, 0.660));

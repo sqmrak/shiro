@@ -53,8 +53,9 @@ void ShiroApplyBackgroundGradientForState(CAGradientLayer *g, NSString *state, B
                          [NSNumber numberWithFloat:1.0f], nil];
         }
     } else if (ShiroThemeIsMaterial()) {
-/* the page is one flat colour, with no ramp for a surface to be lit by */
-        colors = [NSArray arrayWithObjects:(id)kBG.CGColor, (id)kBG.CGColor, nil];
+        start = CGPointMake(0.1f, 0.0f);
+        end = CGPointMake(0.9f, 1.0f);
+        colors = [NSArray arrayWithObjects:(id)kBG.CGColor, (id)kBGBot.CGColor, nil];
         locations = nil;
     } else {
 /* the palettes pick kBG and kBGBot a step apart at most, which read as a flat
