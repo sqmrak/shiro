@@ -5,6 +5,7 @@
 #import "material.h"
 
 #include <math.h>
+#include <dlfcn.h>
 
 static NSString * const kShiroOrbitSpinKey = @"shiro.orbit.spin";
 static NSString * const kShiroOrbitPulseKey = @"shiro.orbit.pulse";
@@ -12,15 +13,38 @@ static NSString * const kShiroOrbitFadeKey = @"shiro.orbit.fade";
 static const CFTimeInterval kShiroOrbitFadeTime = 0.45;
 static const CGFloat kShiroOrbitDotRest = 0.2f;
 
+static BOOL ShiroReduceMotion(void) {
+    BOOL (*enabled)(void) = (BOOL (*)(void))dlsym(RTLD_DEFAULT, "UIAccessibilityIsReduceMotionEnabled");
+    return enabled && enabled();
+}
+
+static UIBezierPath *ShiroMaterialOutline(CGPoint center, CGFloat radius, int lobes, CGFloat depth) {
+    UIBezierPath *path = [UIBezierPath bezierPath];
+    for (int i = 0; i < 120; ++i) {
+        CGFloat angle = (CGFloat)(2.0 * M_PI * i / 120.0);
+        CGFloat r = radius * (1.0f + depth * cosf(lobes * angle));
+        CGPoint point = CGPointMake(center.x + r * sinf(angle), center.y - r * cosf(angle));
+        if (i == 0) [path moveToPoint:point]; else [path addLineToPoint:point];
+    }
+    [path closePath];
+    return path;
+}
+
+static UIBezierPath *ShiroFaceOutline(CGPoint center, CGFloat radius, NSString *state) {
+    if ([state isEqualToString:@"connecting"]) return ShiroMaterialOutline(center, radius, 8, 0.07f);
+    if ([state isEqualToString:@"error"]) return ShiroMaterialOutline(center, radius, 5, 0.07f);
+    return ShiroMaterialOutline(center, radius, 12, 0.035f);
+}
+
 static BOOL ShiroHomeIsPad(void) {
     return [[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad;
 }
 
 static UIColor *ShiroHomeStateTint(NSString *key) {
-    if ([key isEqualToString:@"connected"])
-        return [UIColor colorWithRed:1.0 green:0.06 blue:0.39 alpha:1.0];
     if ([key isEqualToString:@"error"])
-        return [UIColor colorWithRed:0.95 green:0.30 blue:0.26 alpha:1.0];
+        return ShiroThemeIsLight() ? [UIColor colorWithRed:1.0 green:0.85 blue:0.84 alpha:1.0]
+                                   : [UIColor colorWithRed:0.58 green:0.0 blue:0.04 alpha:1.0];
+    if ([key isEqualToString:@"idle"]) return kCellHi;
     return kAccentBlue;
 }
 
@@ -172,7 +196,7 @@ static CGPathRef ShiroCirclePath(CGPoint c, CGFloat r) {
     CGRect faceRect = CGRectMake(c.x - faceR, c.y - faceR, faceR * 2.0f, faceR * 2.0f);
     _halo.path = ShiroCirclePath(c, ringR);
     _halo.shadowPath = _halo.path;
-    _face.path = ShiroCirclePath(c, faceR);
+    _face.path = ShiroThemeIsMaterial() ? ShiroFaceOutline(c, faceR * 0.96f, _stateKey).CGPath : ShiroCirclePath(c, faceR);
     _face.shadowPath = _face.path;
     _faceFill.frame = faceRect;
     _faceFill.cornerRadius = faceR;
@@ -187,6 +211,8 @@ static CGPathRef ShiroCirclePath(CGPoint c, CGFloat r) {
     _dot.path = ShiroCirclePath(CGPointMake(dotR, dotR), dotR);
     _dot.shadowPath = _dot.path;
     ShiroEndSilentLayers();
+    [_face removeAnimationForKey:@"shiro.face.cycle"];
+    [self syncFaceMotionAfter:0.0];
 }
 
 /* at rest the button is lit only by the theme. a tunnel that is up, dialing or
@@ -197,7 +223,7 @@ static CGPathRef ShiroCirclePath(CGPoint c, CGFloat r) {
    hidden */
 - (void)applyMaterialTheme {
     UIColor *tint = ShiroHomeStateTint(_stateKey);
-    UIColor *ink = ShiroPillLabelColor(tint);
+    UIColor *ink = [_stateKey isEqualToString:@"idle"] ? kInkMuted : ShiroPillLabelColor(tint);
     CAShapeLayer *shown = (CAShapeLayer *)[_face presentationLayer];
     CGColorRef before = CGColorRetain((shown ? shown : _face).fillColor);
     ShiroBeginSilentLayers();
@@ -399,13 +425,41 @@ static void ShiroOrbitTween(CALayer *layer, NSString *path, id from, id to, BOOL
 
 /* material's progress ring turns while the tunnel dials and nowhere else */
 - (void)syncSpinner {
-    BOOL want = ShiroThemeIsMaterial() && _running && [_stateKey isEqualToString:@"connecting"];
+    BOOL want = ShiroThemeIsMaterial() && _running && !ShiroReduceMotion() && [_stateKey isEqualToString:@"connecting"];
     if (want) ShiroMaterialSpinnerStart(_spinner);
     else ShiroMaterialSpinnerStop(_spinner);
 }
 
+- (void)syncFaceMotionAfter:(CFTimeInterval)delay {
+    NSString *key = @"shiro.face.cycle";
+    if (!ShiroThemeIsMaterial() || !_running || !self.window || ShiroReduceMotion() || _faceRadius <= 0.0f) {
+        [_face removeAnimationForKey:key];
+        return;
+    }
+    if ([_face animationForKey:key]) return;
+    CGPoint center = CGPointMake(self.bounds.size.width * 0.5f, self.bounds.size.height * 0.5f);
+    CGFloat radius = _faceRadius * 0.96f;
+    BOOL connecting = [_stateKey isEqualToString:@"connecting"];
+    BOOL error = [_stateKey isEqualToString:@"error"];
+    int lobes = error ? 5 : 12;
+    CGFloat depth = error ? 0.10f : 0.065f;
+    UIBezierPath *rest = ShiroFaceOutline(center, radius, _stateKey);
+    UIBezierPath *second = connecting ? ShiroMaterialOutline(center, radius, 5, 0.08f)
+                                      : ShiroMaterialOutline(center, radius, lobes, depth);
+    UIBezierPath *third = connecting ? ShiroMaterialOutline(center, radius, 10, 0.055f)
+                                     : ShiroMaterialOutline(center, radius, lobes, error ? 0.045f : 0.015f);
+    CAKeyframeAnimation *cycle = [CAKeyframeAnimation animationWithKeyPath:@"path"];
+    cycle.values = [NSArray arrayWithObjects:(id)rest.CGPath, (id)second.CGPath,
+                    (id)third.CGPath, (id)rest.CGPath, nil];
+    cycle.duration = connecting ? 4.8 : (error ? 4.0 : 6.0);
+    if (delay > 0.0) cycle.beginTime = [_face convertTime:CACurrentMediaTime() fromLayer:nil] + delay;
+    cycle.repeatCount = HUGE_VALF;
+    cycle.timingFunction = ShiroMaterialStandardCurve();
+    [_face addAnimation:cycle forKey:key];
+}
+
 - (void)syncPulse {
-    BOOL want = _running && [_stateKey isEqualToString:@"connecting"];
+    BOOL want = _running && !ShiroReduceMotion() && [_stateKey isEqualToString:@"connecting"];
     if (!want) {
         [_ring removeAnimationForKey:kShiroOrbitPulseKey];
         return;
@@ -426,18 +480,44 @@ static void ShiroOrbitTween(CALayer *layer, NSString *path, id from, id to, BOOL
     if (![key length]) key = @"idle";
     BOOL changed = ![key isEqualToString:_stateKey];
     if (changed) {
+        CAShapeLayer *shown = (CAShapeLayer *)[_face presentationLayer];
+        CGPathRef oldPath = shown && shown.path ? CGPathCreateCopy(shown.path) : (_face.path ? CGPathCreateCopy(_face.path) : NULL);
+        [_face removeAnimationForKey:@"shiro.face.cycle"];
         [_stateKey release];
         _stateKey = [key copy];
+        if (ShiroThemeIsMaterial() && _faceRadius > 0.0f) {
+            CGPoint center = CGPointMake(self.bounds.size.width * 0.5f, self.bounds.size.height * 0.5f);
+            ShiroBeginSilentLayers();
+            _face.path = ShiroFaceOutline(center, _faceRadius * 0.96f, _stateKey).CGPath;
+            _face.shadowPath = _face.path;
+            ShiroEndSilentLayers();
+            if (oldPath && self.window && _running && !ShiroReduceMotion()) {
+                CABasicAnimation *morph = [CABasicAnimation animationWithKeyPath:@"path"];
+                morph.fromValue = (id)oldPath;
+                morph.toValue = (id)_face.path;
+                morph.duration = 0.5;
+                morph.timingFunction = [CAMediaTimingFunction functionWithControlPoints:0.34f :1.25f :0.64f :1.0f];
+                [_face addAnimation:morph forKey:@"shiro.face.morph"];
+            }
+        }
+        if (oldPath) CGPathRelease(oldPath);
     }
     [self applyTheme];
     [self syncOrbitAnimated:changed restart:changed];
     [self syncPulse];
     [self syncSpinner];
-    if (changed && ShiroThemeIsMaterial() && self.window &&
-        [_stateKey isEqualToString:@"connected"])
+    [self syncFaceMotionAfter:changed && _running && !ShiroReduceMotion() ? 0.5 : 0.0];
+    if (changed && ShiroThemeIsMaterial() && self.window && _running && !ShiroReduceMotion())
         ShiroMaterialPulse(self.layer, CGPointMake(self.bounds.size.width * 0.5f,
                                                    self.bounds.size.height * 0.5f),
                            _faceRadius, ShiroHomeStateTint(_stateKey));
+    if (changed && [_stateKey isEqualToString:@"error"] && self.window && _running && !ShiroReduceMotion()) {
+        CAKeyframeAnimation *shake = [CAKeyframeAnimation animationWithKeyPath:@"transform.translation.x"];
+        shake.values = [NSArray arrayWithObjects:@0, @-9, @7, @-4, @2, @0, nil];
+        shake.duration = 0.48;
+        [_face addAnimation:shake forKey:@"shiro.face.error"];
+        [_glyph addAnimation:shake forKey:@"shiro.glyph.error"];
+    }
 }
 
 - (void)setRunning:(BOOL)running {
@@ -446,14 +526,24 @@ static void ShiroOrbitTween(CALayer *layer, NSString *path, id from, id to, BOOL
     [self syncOrbitAnimated:NO restart:changed];
     [self syncPulse];
     [self syncSpinner];
+    [self syncFaceMotionAfter:0.0];
 }
 
-/* a button lifts under the finger in material and does not shrink */
+- (void)didMoveToWindow {
+    [super didMoveToWindow];
+    [self syncFaceMotionAfter:0.0];
+}
+
 - (void)setHighlighted:(BOOL)highlighted {
     [super setHighlighted:highlighted];
-    if (ShiroThemeIsMaterial())
-        ShiroMaterialSetElevation(_face, highlighted ? 12.0f : 6.0f, YES);
-    else
+    if (ShiroThemeIsMaterial()) {
+        BOOL animate = !ShiroReduceMotion();
+        ShiroMaterialSetElevation(_face, highlighted ? 12.0f : 6.0f, animate);
+        CGAffineTransform target = highlighted && animate ? CGAffineTransformMakeScale(0.95f, 0.95f) : CGAffineTransformIdentity;
+        if (!animate) self.transform = target;
+        else if (highlighted) ShiroAnimate(0.10, ^{ self.transform = target; }, NULL);
+        else ShiroAnimateSpring(0.30, 0, ^{ self.transform = target; }, NULL);
+    } else
         ShiroPressPop(self, highlighted);
 }
 
