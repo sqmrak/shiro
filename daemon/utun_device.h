@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+struct sockaddr;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -77,6 +79,20 @@ utun_device_status_t utun_device_read_frame(utun_device_t *device, uint8_t *fram
    a failed descriptor come back as three different results */
 utun_device_status_t utun_device_write_frame(utun_device_t *device,
                                              const uint8_t *frame, size_t len);
+
+/* bind the utun interface to the physical one that carries it (XNU
+   UTUN_OPT_SET_DELEGATE_INTERFACE), so ios 13 and later keep the wifi glyph and
+   the system vpn state. an empty name clears the binding. returns 0, or -1 with
+   errno set when the kernel refuses it, as kernels before ios 9 do */
+int utun_device_set_delegate(utun_device_t *device, const char *physical_ifname);
+
+/* 1 when the address can belong to a link that carries traffic: not unspecified,
+   loopback or link-local */
+int utun_device_address_usable(const struct sockaddr *sa);
+
+/* the interface that carries traffic now: en0 with a usable address, else the
+   first pdp_ip with one, else an empty name. returns -1 when the list cannot be read */
+int utun_device_live_physical(char *out, size_t cap);
 
 /* close the descriptor once. calling it again does nothing */
 void utun_device_close(utun_device_t *device);

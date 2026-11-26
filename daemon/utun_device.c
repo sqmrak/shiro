@@ -1,7 +1,10 @@
 #include "utun_device.h"
 
+#include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -101,6 +104,23 @@ utun_device_status_t utun_device_write_frame(utun_device_t *device,
     return UTUN_DEVICE_OK;
 }
 
+/* a link-local or loopback address does not mean the link carries traffic */
+int utun_device_address_usable(const struct sockaddr *sa) {
+    if (!sa) return 0;
+    if (sa->sa_family == AF_INET) {
+        uint32_t ip = ntohl(((const struct sockaddr_in *)sa)->sin_addr.s_addr);
+        return ip != 0 && (ip & 0xff000000U) != 0x7f000000U && (ip & 0xffff0000U) != 0xa9fe0000U;
+    }
+    if (sa->sa_family == AF_INET6) {
+        const uint8_t *a = ((const struct sockaddr_in6 *)sa)->sin6_addr.s6_addr;
+        int low = 1;
+        for (int i = 0; i < 15; ++i) if (a[i]) { low = 0; break; }
+        if (low && a[15] <= 1) return 0;
+        return !(a[0] == 0xfe && (a[1] & 0xc0) == 0x80);
+    }
+    return 0;
+}
+
 void utun_device_close(utun_device_t *device) {
     if (!device || device->fd < 0) return;
     close(device->fd);
@@ -109,8 +129,11 @@ void utun_device_close(utun_device_t *device) {
 
 #if defined(__APPLE__)
 
-#include <sys/ioctl.h>
+/* the ios 5 sdk net/if.h uses struct sockaddr without including it */
 #include <sys/socket.h>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
 
 #ifndef AF_SYSTEM
 #define AF_SYSTEM 32
@@ -126,6 +149,9 @@ void utun_device_close(utun_device_t *device) {
 #endif
 #ifndef UTUN_OPT_IFNAME
 #define UTUN_OPT_IFNAME 2
+#endif
+#ifndef UTUN_OPT_SET_DELEGATE_INTERFACE
+#define UTUN_OPT_SET_DELEGATE_INTERFACE 15
 #endif
 
 #define UTUN_KCTL_NAME_MAX 96
@@ -241,6 +267,40 @@ utun_device_status_t utun_device_open(utun_device_t *device, unsigned first_unit
     return UTUN_DEVICE_OK;
 }
 
+int utun_device_set_delegate(utun_device_t *device, const char *physical_ifname) {
+    if (!device || device->fd < 0) {
+        errno = EBADF;
+        return -1;
+    }
+    size_t len = physical_ifname ? strlen(physical_ifname) : 0;
+    if (len >= IFNAMSIZ) {
+        errno = EINVAL;
+        return -1;
+    }
+    return setsockopt(device->fd, SYSPROTO_CONTROL, UTUN_OPT_SET_DELEGATE_INTERFACE,
+                      physical_ifname ? physical_ifname : "", (socklen_t)len);
+}
+
+int utun_device_live_physical(char *out, size_t cap) {
+    if (!out || cap == 0) return -1;
+    out[0] = '\0';
+    struct ifaddrs *list = NULL;
+    if (getifaddrs(&list) != 0) return -1;
+    char cell[IFNAMSIZ] = "";
+    int wifi = 0;
+    for (const struct ifaddrs *it = list; it && !wifi; it = it->ifa_next) {
+        if (!it->ifa_name || !it->ifa_addr) continue;
+        if ((it->ifa_flags & (IFF_UP | IFF_RUNNING)) != (IFF_UP | IFF_RUNNING)) continue;
+        if (!utun_device_address_usable(it->ifa_addr)) continue;
+        if (strcmp(it->ifa_name, "en0") == 0) wifi = 1;
+        else if (!cell[0] && strncmp(it->ifa_name, "pdp_ip", 6) == 0)
+            snprintf(cell, sizeof cell, "%s", it->ifa_name);
+    }
+    freeifaddrs(list);
+    snprintf(out, cap, "%s", wifi ? "en0" : cell);
+    return 0;
+}
+
 #else
 
 utun_device_status_t utun_device_open(utun_device_t *device, unsigned first_unit) {
@@ -248,6 +308,19 @@ utun_device_status_t utun_device_open(utun_device_t *device, unsigned first_unit
     if (!device) return UTUN_DEVICE_ERR_ARG;
     device->last_errno = ENOTSUP;
     return UTUN_DEVICE_ERR_UNSUPPORTED;
+}
+
+int utun_device_set_delegate(utun_device_t *device, const char *physical_ifname) {
+    (void)device;
+    (void)physical_ifname;
+    errno = ENOTSUP;
+    return -1;
+}
+
+int utun_device_live_physical(char *out, size_t cap) {
+    if (out && cap) out[0] = '\0';
+    errno = ENOTSUP;
+    return -1;
 }
 
 #endif

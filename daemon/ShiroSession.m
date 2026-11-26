@@ -1,5 +1,6 @@
 #import "ShiroSession.h"
 
+#include <notify.h>
 #include <pthread.h>
 #include <errno.h>
 #include <arpa/inet.h>
@@ -68,6 +69,7 @@ typedef struct {
     BOOL _identityLoaded;
     /* guards what other threads read: the route and the run that is still wanted */
     NSLock *_stateLock;
+    int _networkToken;
     uint32_t _liveRun;
     unsigned _queuePending;
     /* main thread only */
@@ -98,6 +100,16 @@ typedef struct {
     _queue = dispatch_queue_create("shiro.core", NULL);
     pthread_rwlock_init(&_coreLock, NULL);
     _stateLock = [[NSLock alloc] init];
+    /* wifi and cellular come and go under a running tunnel, and the utun has to follow the link
+       that carries it or ios 13 and later drop the wifi glyph and the vpn badge */
+    _networkToken = -1;
+    if (notify_register_dispatch("com.apple.system.config.network_change", &_networkToken, _queue, ^(int token) {
+            (void)token;
+            [self followNetwork];
+        }) != NOTIFY_STATUS_OK) {
+        _networkToken = -1;
+        NSLog(@"shiro: cannot watch network changes");
+    }
     _enabled = [[NSUserDefaults standardUserDefaults] boolForKey:ShiroEnabledKey];
     uint8_t proxyURL[SHIRO_PROXY_URL_MAX + 1];
     size_t proxyLength = 0;
@@ -111,6 +123,7 @@ typedef struct {
 }
 
 - (void)dealloc {
+    if (_networkToken != -1) notify_cancel(_networkToken);
     dispatch_sync(_queue, ^{ [self stopCore]; });
     dispatch_release(_queue);
     pthread_rwlock_destroy(&_coreLock);
@@ -580,6 +593,18 @@ done:
     _context = NULL;
     shiro_tunnel_close(&_tunnel);
     [_stateLock lock]; [_routeText release]; _routeText = nil; [_stateLock unlock];
+}
+
+/* queue only. the same queue opens and closes the tunnel, so the descriptor cannot go away under this call */
+- (void)followNetwork {
+    char live[16];
+    if (shiro_tunnel_follow_network(&_tunnel, live, sizeof(live)) != 1) return;
+    NSString *name = [NSString stringWithUTF8String:live];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (_state != ShiroStateUp) return;
+        [_physicalInterface release]; _physicalInterface = [name copy];
+        [self setState:_state failure:_failure];
+    });
 }
 
 #pragma mark use

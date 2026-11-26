@@ -67,6 +67,20 @@ void shiro_tunnel_close(shiro_tunnel *tunnel) {
         tunnel->applied = 0;
     }
     utun_device_close(&tunnel->device);
+    tunnel->delegate[0] = '\0';
+}
+
+int shiro_tunnel_follow_network(shiro_tunnel *tunnel, char *live, size_t cap) {
+    if (!tunnel || !live || !cap || tunnel->device.fd < 0) return 0;
+    if (utun_device_live_physical(live, cap) != 0) return 0;
+    if (strcmp(live, tunnel->delegate) == 0) return 0;
+    if (utun_device_set_delegate(&tunnel->device, live) != 0) {
+        fprintf(stderr, "shiro: delegate of %s to %s failed (errno %d)\n", tunnel->device.ifname, live[0] ? live : "(none)", errno);
+        return -1;
+    }
+    snprintf(tunnel->delegate, sizeof(tunnel->delegate), "%s", live);
+    fprintf(stderr, "shiro: network changed, %s delegated to %s\n", tunnel->device.ifname, live[0] ? live : "(none)");
+    return 1;
 }
 
 int shiro_tunnel_open(shiro_tunnel *tunnel, uint32_t address, uint32_t endpoint, const shiro_routing *routing, const char *dns, char *error, size_t cap) {
@@ -97,6 +111,13 @@ int shiro_tunnel_open(shiro_tunnel *tunnel, uint32_t address, uint32_t endpoint,
         snprintf(error, cap, "cannot open utun: %s (errno %d)", utun_device_status_name(UTUN_DEVICE_ERR_CONNECT), tunnel->device.last_errno);
         return -1;
     }
+    /* ios 13 and later draw the wifi glyph and the vpn state from the utun that is
+       delegated to the link carrying it, and drop both for an undelegated one. older
+       kernels refuse the option, and their status bar does not need it */
+    if (utun_device_set_delegate(&tunnel->device, path.ifname) == 0)
+        snprintf(tunnel->delegate, sizeof(tunnel->delegate), "%s", path.ifname);
+    else
+        fprintf(stderr, "shiro: delegate of %s to %s failed (errno %d)\n", tunnel->device.ifname, path.ifname, errno);
     snprintf(input.ifname, sizeof(input.ifname), "%s", tunnel->device.ifname);
     snprintf(input.physical_ifname, sizeof(input.physical_ifname), "%s", path.ifname);
     input.route_ipv4 = input.enable_ipv6 = 1;
