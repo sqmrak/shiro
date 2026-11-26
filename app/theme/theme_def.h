@@ -13,7 +13,8 @@ enum {
     ShiroThemeCapLightOnly = 1u << 5,
     ShiroThemeCapDarkOnly  = 1u << 6,
     ShiroThemeCapIos26     = 1u << 7, /* glass; pairs with capios16 paths */
-    ShiroThemeCapMaterial  = 1u << 8  /* flat surfaces that rise on shadows, ripples */
+    ShiroThemeCapMaterial  = 1u << 8, /* flat surfaces that rise on shadows, ripples */
+    ShiroThemeCapClassic   = 1u << 9  /* glass bars and glossy controls, the look of ios 5 and 6 */
 };
 
 /* picker folders; themesvc groups by this id */

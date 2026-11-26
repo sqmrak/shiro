@@ -290,6 +290,14 @@ static CGPathRef ShiroCirclePath(CGPoint c, CGFloat r) {
     _ring.shadowRadius = 6.0f;
     _ring.shadowOpacity = idle ? 0.0f : 0.45f;
     _glyph.strokeColor = (connected ? [UIColor whiteColor] : tint).CGColor;
+    if (idle && ShiroThemeIsClassic()) {
+        /* the idle button is the cell colour, white or dark grey, and a glyph, ring and track
+           drawn in that colour are the same as the disc under them. a pale pink reads on both */
+        UIColor *pink = [UIColor colorWithRed:0.95f green:0.66f blue:0.78f alpha:1.0f];
+        _glyph.strokeColor = pink.CGColor;
+        _ring.strokeColor = pink.CGColor;
+        _track.strokeColor = [pink colorWithAlphaComponent:0.35f].CGColor;
+    }
     _trail.strokeColor = [tint colorWithAlphaComponent:0.45f].CGColor;
     _dot.fillColor = tint.CGColor;
     _dot.shadowColor = tint.CGColor;

@@ -71,6 +71,8 @@ BOOL ShiroThemeIsFrutigeraero(void);
 /* 1 for the material expressive theme: flat surfaces, elevation shadows, touch ripples and a
    circular progress ring on the power button (see material.h) */
 BOOL ShiroThemeIsMaterial(void);
+/* 1 for the classic theme: glass bars in the app colour, glossy controls, grouped lists of ios 6 */
+BOOL ShiroThemeIsClassic(void);
 /* card corner; larger on ios16 */
 CGFloat ShiroThemeCardRadius(void);
 /* frost subview on host */

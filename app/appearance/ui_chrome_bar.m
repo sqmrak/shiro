@@ -44,10 +44,11 @@ void StyleNavBarClassic(UINavigationController *nav) {
     BOOL boy = ShiroThemeIsBoykisser();
     BOOL miside = ShiroThemeIsMiside();
     BOOL material = ShiroThemeIsMaterial();
+    BOOL classic = ShiroThemeIsClassic();
     UIImage *barBackground = nil;
 /* black chrome preserves contrast over the purple miside field on ios 6, and
    keeps the status bar text white over material's saturated app bar */
-    BOOL barLight = light && !miside && !material;
+    BOOL barLight = light && !miside && !material && !classic;
     bar.barStyle = barLight ? UIBarStyleDefault : UIBarStyleBlack;
 /* an opaque bar prevents old navigation controllers from covering the first section */
     bar.translucent = NO;
@@ -97,7 +98,15 @@ void StyleNavBarClassic(UINavigationController *nav) {
         } else {
             CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
             CGFloat comps[12];
-            if (boy && light) {
+            CGFloat br = 0.0f, bg = 0.0f, bb = 0.0f, ba = 1.0f;
+            if (classic && ShiroColorComponents(kChromeHi, &br, &bg, &bb, &ba)) {
+/* the glass bar of the classic theme: the app colour with a lighter top and a darker foot, a
+   mix of fifteen and twelve percent toward white and black, as the classic bars of exteria */
+                CGFloat p[] = { br + (1.0f - br) * 0.15f, bg + (1.0f - bg) * 0.15f, bb + (1.0f - bb) * 0.15f, 1,
+                                br, bg, bb, 1,
+                                br * 0.88f, bg * 0.88f, bb * 0.88f, 1 };
+                memcpy(comps, p, sizeof p);
+            } else if (boy && light) {
                 CGFloat p[] = { 1.00,0.92,0.95,1, 1.00,0.78,0.88,1, 1.00,0.68,0.82,1 };
                 memcpy(comps, p, sizeof p);
             } else if (boy) {
@@ -133,7 +142,7 @@ void StyleNavBarClassic(UINavigationController *nav) {
    reads as a second colour on the same bar */
     if (material)
         titleC = light ? [UIColor whiteColor] : kInk;
-    else if (miside)
+    else if (miside || classic)
         titleC = [UIColor whiteColor];
     else if (light || flat || boy)
         titleC = kInk;
@@ -153,10 +162,11 @@ void StyleNavBarClassic(UINavigationController *nav) {
             [attrs setObject:[NSValue valueWithCGSize:CGSizeZero]
                       forKey:UITextAttributeTextShadowOffset];
         } else {
-            UIColor *shC = light ? [UIColor colorWithWhite:1 alpha:0.55]
-                                 : [UIColor colorWithWhite:0 alpha:0.65];
+            BOOL embossed = light && !classic;
+            UIColor *shC = embossed ? [UIColor colorWithWhite:1 alpha:0.55]
+                                    : [UIColor colorWithWhite:0 alpha:classic ? 0.35 : 0.65];
             [attrs setObject:shC forKey:UITextAttributeTextShadowColor];
-            [attrs setObject:[NSValue valueWithCGSize:CGSizeMake(0, light ? 1 : -1)]
+            [attrs setObject:[NSValue valueWithCGSize:CGSizeMake(0, embossed ? 1 : -1)]
                       forKey:UITextAttributeTextShadowOffset];
         }
 #pragma clang diagnostic pop
@@ -166,7 +176,7 @@ void StyleNavBarClassic(UINavigationController *nav) {
 /* ios 4.3 has no bar background or title attributes: the stock bar takes its
    colour from the tint and always draws a white title, so the tint is the
    theme chrome held dark enough to keep that title readable */
-        UIColor *fill = material ? kChromeHi : (miside
+        UIColor *fill = (material || classic) ? kChromeHi : (miside
             ? [UIColor colorWithRed:0.12f green:0.04f blue:0.14f alpha:1.0f]
             : (boy ? [UIColor colorWithRed:1.0f green:0.38f blue:0.68f alpha:1.0f]
                    : kAccentBlue));
@@ -185,6 +195,12 @@ void StyleNavBarClassic(UINavigationController *nav) {
                 bar.tintColor = bezels ? kChromeHi : [UIColor whiteColor];
             else
                 bar.tintColor = kAccentBlue;
+        }
+        else if (classic) {
+/* before ios 7 the tint colours the bezel of every bar button, so it is the bar colour there;
+   from ios 7 it is the text colour and white is right on the glass */
+            BOOL bezels = ![bar respondsToSelector:@selector(setBarTintColor:)];
+            bar.tintColor = bezels ? kChromeHi : [UIColor whiteColor];
         }
         else if (miside)
             bar.tintColor = [UIColor colorWithRed:1.0 green:0.55 blue:0.80 alpha:1.0];

@@ -448,6 +448,10 @@ BOOL ShiroThemeIsMaterial(void) {
     return (gCaps & ShiroThemeCapMaterial) != 0;
 }
 
+BOOL ShiroThemeIsClassic(void) {
+    return (gCaps & ShiroThemeCapClassic) != 0;
+}
+
 BOOL ShiroThemeAllowsDark(void) {
     return (gCaps & (ShiroThemeCapLightOnly | ShiroThemeCapDarkOnly)) == 0;
 }
