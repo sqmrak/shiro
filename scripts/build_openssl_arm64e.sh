@@ -5,7 +5,7 @@ prefix="${SHIRO_OPENSSL_VE:?set SHIRO_OPENSSL_VE to the arm64e openssl prefix}"
 build="${SHIRO_OPENSSL_BUILD_VE:?set SHIRO_OPENSSL_BUILD_VE to a separate build directory}"
 sdk="${SHIRO_SDK_VE:-${SHIRO_SDK_V64:?set SHIRO_SDK_V64}}"
 cc="${SHIRO_MODERN_CC:?set SHIRO_MODERN_CC to a versioned arm64e compiler}"
-tc="${SHIRO_TC:-${THEOS:?set THEOS or SHIRO_TC}/toolchain/linux/iphone/bin}"
+tc="${SHIRO_TC:?set SHIRO_TC to the ios toolchain bin directory}"
 [[ -f "$src/Configure" && -x "$cc" && -x "$tc/llvm-ar" ]] || { echo 'missing openssl source or compiler tools' >&2; exit 1; }
 mkdir -p "$build" "$prefix/lib" "$prefix/include"
 export SHIRO_ARM64E_CC="$cc" SHIRO_ARM64E_TC="$tc"

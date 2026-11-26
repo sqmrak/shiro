@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-make app-unsigned
-signer="${SHIRO_LDID:-${SHIRO_TC:-${THEOS:?set THEOS or SHIRO_LDID}/toolchain/linux/iphone/bin}/ldid}"
-tc="${SHIRO_TC:-${THEOS:?set THEOS or SHIRO_TC}/toolchain/linux/iphone/bin}"
+signer="${SHIRO_LDID:-${SHIRO_TC:?set SHIRO_TC to the ios toolchain bin directory}/ldid}"
+tc="${SHIRO_TC:?set SHIRO_TC to the ios toolchain bin directory}"
 [[ -x "$signer" ]] || { echo 'missing SHIRO_LDID signer' >&2; exit 1; }
 "$tc/lipo" -info build/ios/Shiro.app/Shiro
 if [[ -n "${SHIRO_SDK_V5:-}" ]]; then

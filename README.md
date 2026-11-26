@@ -79,7 +79,7 @@ on ios 6 without a launchd socket, upgrades restart the daemon through KeepAlive
 needs an iOS cross toolchain (`clang`, `lipo`, `otool`, `ldid`), armv7 and arm64 SDKs, static OpenSSL for each slice, Python 3 with Pillow and `dpkg-deb`.
 
 ```bash
-export THEOS=/path/to/theos
+export SHIRO_TC=/path/to/ios/toolchain/bin
 export SHIRO_SDK_V7=/path/to/legacy-iphoneos.sdk
 export SHIRO_SDK_V64=/path/to/modern-iphoneos.sdk
 export SHIRO_OPENSSL_V7=/path/to/openssl/armv7

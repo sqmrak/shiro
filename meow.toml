@@ -1,0 +1,132 @@
+# by sqmrak :3
+
+default = ["release"]
+
+[vars]
+TC = "${SHIRO_TC}"
+PYTHON = "${SHIRO_PYTHON:-python3}"
+
+[slice.armv7]
+cc = "${TC}/clang"
+flags = ["-target", "armv7-apple-ios5.0", "-B", "${TC}", "-isysroot", "${SHIRO_SDK_V7}"]
+[slice.armv7.vars]
+OSSL = "${SHIRO_OPENSSL_V7}"
+
+[slice.arm64]
+cc = "${TC}/clang"
+flags = ["-target", "arm64-apple-ios7.0", "-B", "${TC}", "-isysroot", "${SHIRO_SDK_V64}"]
+[slice.arm64.vars]
+OSSL = "${SHIRO_OPENSSL_V64}"
+
+[slice.arm64e]
+cc = "${TC}/clang"
+flags = ["-target", "arm64e-apple-ios12.0", "-B", "${TC}", "-isysroot", "${SHIRO_SDK_VE:-${SHIRO_SDK_V64}}"]
+
+[slice.arm64e-modern]
+cc = "${SHIRO_MODERN_CC}"
+flags = ["-target", "arm64e-apple-ios14.0", "-B", "${TC}", "-isysroot", "${SHIRO_SDK_VE:-${SHIRO_SDK_V64}}"]
+[slice.arm64e-modern.vars]
+OSSL = "${SHIRO_OPENSSL_VE}"
+
+[target.app]
+slices = ["armv7", "arm64", "arm64e-modern"]
+output = "build/meow/${slice}/Shiro"
+cflags = ["-O2", "-g", "-Wall", "-Wextra", "-Werror", "-Wno-unused-parameter", "-Icore/base", "-Icore/net", "-Icommon", "-Iapp/controllers", "-Iapp/support", "-Iapp/appearance", "-Iapp/views", "-Iapp/theme"]
+ldflags = ["-framework", "Foundation", "-framework", "CoreFoundation", "-framework", "UIKit", "-framework", "QuartzCore", "-framework", "CoreGraphics", "-framework", "CoreText", "-framework", "CFNetwork"]
+[target.app.per_slice.armv7]
+ldflags = ["-nostartfiles", "${SHIRO_CRT_V7}"]
+[target.app.per_slice.arm64e-modern]
+cflags = ["-Wno-error=deprecated-declarations"]
+[[target.app.src]]
+files = ["app/*/*.m", "common/ShiroControl.m"]
+cflags = ["-std=gnu99", "-fno-objc-arc", "-fblocks"]
+[[target.app.src]]
+files = ["core/net/shiro_control_io.c", "core/base/shiro_clock.c", "core/base/shiro_log.c", "core/base/shiro_motion.c", "core/base/shiro_device_model.c"]
+cflags = ["-std=c99", "-Wshadow", "-Wstrict-prototypes", "-Wmissing-prototypes", "-Wconversion", "-Wno-sign-conversion"]
+
+[target.daemon]
+slices = ["armv7", "arm64", "arm64e-modern"]
+output = "build/meow/${slice}/shirod"
+cflags = ["-O2", "-g", "-Wall", "-Wextra", "-Werror", "-Icore/base", "-Icore/crypto", "-Icore/dpi", "-Icore/json", "-Icore/net", "-Icore/routing", "-Icore/warp", "-Icore/wireguard", "-Icommon", "-Idaemon", "-I${OSSL}/include"]
+ldflags = ["${OSSL}/lib/libssl.a", "${OSSL}/lib/libcrypto.a", "-framework", "Foundation", "-framework", "CoreFoundation", "-framework", "SystemConfiguration"]
+[target.daemon.per_slice.armv7]
+ldflags = ["-nostartfiles", "${SHIRO_CRT_V7}"]
+[target.daemon.per_slice.arm64e-modern]
+cflags = ["-Wno-error=deprecated-declarations"]
+[[target.daemon.src]]
+files = ["core/*/*.c", "daemon/*.c"]
+exclude = ["core/base/shiro_motion.c"]
+cflags = ["-std=c99", "-Wshadow", "-Wstrict-prototypes", "-Wmissing-prototypes", "-Wconversion", "-Wno-sign-conversion"]
+[[target.daemon.src]]
+files = ["daemon/*.m", "common/ShiroControl.m"]
+cflags = ["-std=gnu99", "-fno-objc-arc", "-fblocks", "-Wno-unused-parameter"]
+
+[target.status]
+slices = ["armv7", "arm64", "arm64e"]
+output = "build/meow/${slice}/shirostatus.dylib"
+cflags = ["-std=gnu99", "-O2", "-g", "-fno-objc-arc", "-fblocks", "-Wall", "-Wextra", "-Werror", "-Wno-unused-parameter"]
+ldflags = ["-dynamiclib", "-install_name", "/var/jb/usr/lib/shirostatus.dylib", "-framework", "Foundation", "-framework", "CoreFoundation", "-framework", "UIKit", "-framework", "QuartzCore", "-framework", "CoreGraphics", "-framework", "CoreText", "-framework", "CFNetwork"]
+[[target.status.src]]
+files = ["status/shiro_status.m"]
+
+[target.status-modern]
+slices = ["arm64", "arm64e-modern"]
+output = "build/meow/${slice}/shirostatus-modern.dylib"
+cflags = ["-std=gnu99", "-O2", "-g", "-fno-objc-arc", "-fblocks", "-Wall", "-Wextra", "-Werror", "-Wno-unused-parameter"]
+ldflags = ["-dynamiclib", "-install_name", "/var/jb/usr/lib/shirostatus.dylib", "-framework", "Foundation", "-framework", "CoreFoundation", "-framework", "UIKit", "-framework", "QuartzCore", "-framework", "CoreGraphics", "-framework", "CoreText", "-framework", "CFNetwork"]
+[target.status-modern.per_slice.arm64e-modern]
+cflags = ["-Wno-error=deprecated-declarations"]
+[[target.status-modern.src]]
+files = ["status/shiro_status.m"]
+
+[fat.app-fat]
+from = "app"
+lipo = "${TC}/lipo"
+output = "build/ios/Shiro"
+[fat.daemon-fat]
+from = "daemon"
+lipo = "${TC}/lipo"
+output = "build/ios/shirod"
+[fat.status-fat]
+from = "status"
+lipo = "${TC}/lipo"
+output = "build/ios/shirostatus.dylib"
+[fat.status-modern-fat]
+from = "status-modern"
+lipo = "${TC}/lipo"
+output = "build/ios/shirostatus-modern.dylib"
+
+[step.app-bundle]
+needs = ["app-fat"]
+run = [["bash", "scripts/stage_app.sh", "${PYTHON}"]]
+inputs = ["packaging/Info.plist", "scripts/icons.py", "assets/*", "resources/shiro/*", "resources/fonts/*", "LICENSE"]
+outputs = ["build/ios/Shiro.app/Shiro"]
+
+[step.inspect]
+needs = ["app-bundle", "daemon-fat", "status-fat", "status-modern-fat"]
+run = [["bash", "scripts/inspect.sh"]]
+stamp = "build/stamps/inspect"
+keep = true
+
+[step.test]
+run = [["make", "test"]]
+inputs = ["core/**/*", "daemon/**/*", "tests/**/*", "tests/Makefile", "Makefile"]
+stamp = "build/stamps/test"
+
+[step.release]
+needs = ["test", "inspect"]
+run = [["bash", "scripts/package.sh"]]
+inputs = ["packaging/**/*", "status/shirostatus.plist", "scripts/verify_package.py", "scripts/verify_macho.py", "build/ios/Shiro.app/*", "build/ios/shirod", "build/ios/shirostatus*.dylib"]
+outputs = ["${SHIRO_PACKAGE_OUTPUT:-build/shiro-v${field:packaging/DEBIAN/control:Version}.deb}"]
+
+[step.unsigned]
+needs = ["test", "inspect"]
+run = [["bash", "scripts/package.sh", "--unsigned"]]
+inputs = ["packaging/**/*", "status/shirostatus.plist", "scripts/verify_package.py", "scripts/verify_macho.py", "build/ios/Shiro.app/*", "build/ios/shirod", "build/ios/shirostatus*.dylib"]
+outputs = ["${SHIRO_PACKAGE_OUTPUT:-build/shiro-v${field:packaging/DEBIAN/control:Version}-unsigned.deb}"]
+
+[step.ipa]
+needs = ["app-bundle"]
+run = [["bash", "scripts/package_ipa.sh"]]
+inputs = ["packaging/app-entitlements.plist", "scripts/verify_ipa.py", "scripts/verify_macho.py", "build/ios/Shiro.app/*"]
+outputs = ["${SHIRO_IPA_OUTPUT:-build/Shiro-${field:packaging/DEBIAN/control:Version}.ipa}"]

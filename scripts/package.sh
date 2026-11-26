@@ -3,8 +3,6 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 mode="${1:-signed}"
 [[ "$mode" == signed || "$mode" == --unsigned ]] || { echo 'usage: package.sh [--unsigned]' >&2; exit 1; }
-make test
-make inspect-unsigned
 version=$(awk -F': ' '$1 == "Version" {print $2}' packaging/DEBIAN/control)
 [[ "$version" =~ ^[0-9][0-9A-Za-z.+~-]*$ ]] || { echo 'invalid package version' >&2; exit 1; }
 stage=build/package-stage
@@ -24,7 +22,7 @@ output="build/shiro-v${version}.deb"
 if [[ "$mode" == --unsigned ]]; then
     output="build/shiro-v${version}-unsigned.deb"
 else
-    signer="${SHIRO_LDID:-${SHIRO_TC:-${THEOS:?set THEOS or SHIRO_LDID}/toolchain/linux/iphone/bin}/ldid}"
+    signer="${SHIRO_LDID:-${SHIRO_TC:?set SHIRO_TC to the ios toolchain bin directory}/ldid}"
     [[ -x "$signer" ]] || { echo 'missing SHIRO_LDID signer' >&2; exit 1; }
     "$signer" -Spackaging/app-entitlements.plist "$stage/var/jb/Applications/Shiro.app/Shiro"
     "$signer" -S "$stage/var/jb/usr/bin/shirod"

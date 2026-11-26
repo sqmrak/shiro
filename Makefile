@@ -5,14 +5,15 @@ test:
 sanitize:
 	env PATH=/usr/bin:/bin $(MAKE) -C tests sanitize CC=$(SHIRO_HOST_CC)
 app-unsigned:
-	$(MAKE) -f scripts/ios.mk app
+	meow build app-bundle
 inspect-unsigned:
-	$(MAKE) -f scripts/ios.mk inspect
-ipa:
-	bash scripts/package_ipa.sh
-package-unsigned:
-	bash scripts/package.sh --unsigned
+	meow build inspect
 deb:
-	bash scripts/package.sh
+	meow build release
+package-unsigned:
+	meow build unsigned
+ipa:
+	meow build ipa
 clean:
+	meow clean
 	rm -rf build/host build/asan build/ios build/package-stage build/ipa-stage scripts/__pycache__ tests/__pycache__
