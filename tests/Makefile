@@ -18,6 +18,6 @@ $(BUILD)/%.o: ../%.c
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 $(BUILD)/test_socket_resolution: LDFLAGS += -Wl,--wrap=getaddrinfo
 $(BUILD)/test_%: core/test_%.c $(OBJ) core/fake_tcp_server.c
-	$(CC) $(CFLAGS) $< core/fake_tcp_server.c $(OBJ) -lpthread -lssl -lcrypto $(LDFLAGS) -o $@
+	$(CC) $(CFLAGS) $< core/fake_tcp_server.c $(OBJ) -lpthread -lssl -lcrypto -lm $(LDFLAGS) -o $@
 -include $(OBJ:.o=.d)
 .SECONDARY: $(OBJ)
