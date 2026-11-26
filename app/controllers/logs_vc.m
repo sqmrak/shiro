@@ -8,6 +8,8 @@
 #import "ui_theme.h"
 #import "app_common.h"
 #import "card_kit.h"
+#import "shiro_dialog.h"
+#import "shiro_animation.h"
 #import "crash_report.h"
 #include "shiro_paths.h"
 
@@ -79,7 +81,23 @@ static NSString *ShiroLogFontKey(void) {
     return key ? *key : nil;
 }
 
-#define LOGS_SHEET_ACTIONS 1
+/* the round tonal button of the header: a glyph on a circle, which sinks a little under the
+   finger and springs back on release */
+static UIButton *ShiroLogRoundButton(id target, SEL action, NSString *label) {
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+    button.frame = CGRectMake(0.0f, 0.0f, 40.0f, 40.0f);
+    button.layer.cornerRadius = 20.0f;
+    button.accessibilityLabel = label;
+    [button addTarget:target action:action forControlEvents:UIControlEventTouchUpInside];
+    ShiroMotionAttachBounce(button, 0.06f);
+    return button;
+}
+
+/* a tonal fill that reads on the terminal plate in a light and in a dark theme */
+static UIColor *ShiroLogTonalFill(void) {
+    return ShiroThemeIsLight() ? [UIColor colorWithWhite:0.0f alpha:0.07f]
+                               : [UIColor colorWithWhite:1.0f alpha:0.10f];
+}
 
 @implementation ShiroLogsController {
 
@@ -87,6 +105,15 @@ static NSString *ShiroLogFontKey(void) {
     UISegmentedControl *_filter;
     UISearchBar *_search;
     UILabel *_count;
+    UIView *_badge;
+    UIImageView *_badgeIcon;
+    UILabel *_headTitle;
+    UIButton *_menuButton;
+    UIButton *_reloadButton;
+    BOOL _entered;
+    BOOL _typing;
+    BOOL _dissolve;
+    NSInteger _renderedFilter;
     NSString *_allLogs;
     NSString *_shown;
     ShiroControl *_ctl;
@@ -99,23 +126,11 @@ static NSString *ShiroLogFontKey(void) {
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = ShiroLocalizedText(@"System Logs");
+    /* the long title was cut between the back button and the two buttons of the bar, so the
+       buttons live in the header of the card and the title is one short word */
+    self.title = ShiroLocalizedText(@"Logs");
+    _renderedFilter = -1;
     ShiroApplyScreenChrome(self.view);
-
-    UIBarButtonItem *refresh =
-        [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh
-                                                       target:self
-                                                       action:@selector(loadLogs)] autorelease];
-    UIBarButtonItem *actions =
-        [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction
-                                                       target:self
-                                                       action:@selector(actionsPressed:)] autorelease];
-/* ios 4.3 has one slot on the right: refresh keeps it, copy and share need two */
-    if ([self.navigationItem respondsToSelector:@selector(setRightBarButtonItems:)])
-        ((void (*)(id, SEL, id))objc_msgSend)(self.navigationItem,
-            @selector(setRightBarButtonItems:), [NSArray arrayWithObjects:refresh, actions, nil]);
-    else
-        self.navigationItem.rightBarButtonItem = refresh;
 
     _filter = [[UISegmentedControl alloc] initWithItems:
                [NSArray arrayWithObjects:ShiroLocalizedText(@"all"), @"shirod",
@@ -135,10 +150,9 @@ static NSString *ShiroLogFontKey(void) {
 
     _count = [[UILabel alloc] initWithFrame:CGRectZero];
     _count.backgroundColor = [UIColor clearColor];
-    _count.font = ShiroFontBody(12.0f, NO);
+    _count.font = [UIFont fontWithName:@"Courier" size:10.5f];
     _count.textColor = kInkMuted;
-    _count.textAlignment = NSTextAlignmentCenter;
-    [self.view addSubview:_count];
+    _count.textAlignment = NSTextAlignmentLeft;
 
     UIView *plate = [[[UIView alloc] initWithFrame:CGRectZero] autorelease];
     plate.tag = 7701;
@@ -148,6 +162,22 @@ static NSString *ShiroLogFontKey(void) {
     plate.opaque = NO;
     ShiroStyleTerminalPlate(plate);
     [self.view addSubview:plate];
+
+    _badge = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 40.0f, 40.0f)];
+    _badge.layer.cornerRadius = 20.0f;
+    [plate addSubview:_badge];
+    _badgeIcon = [[UIImageView alloc] initWithFrame:CGRectMake(9.0f, 9.0f, 22.0f, 22.0f)];
+    [_badge addSubview:_badgeIcon];
+    _headTitle = [[UILabel alloc] initWithFrame:CGRectZero];
+    _headTitle.backgroundColor = [UIColor clearColor];
+    _headTitle.font = [UIFont fontWithName:@"Courier-Bold" size:13.0f];
+    _headTitle.text = @"shiro ~ log";
+    [plate addSubview:_headTitle];
+    [plate addSubview:_count];
+    _reloadButton = [ShiroLogRoundButton(self, @selector(reloadPressed), ShiroLocalizedText(@"Refresh")) retain];
+    [plate addSubview:_reloadButton];
+    _menuButton = [ShiroLogRoundButton(self, @selector(actionsPressed:), ShiroLocalizedText(@"Copy")) retain];
+    [plate addSubview:_menuButton];
 
     _textView = [[UITextView alloc] initWithFrame:CGRectZero];
     _textView.editable = NO;
@@ -171,11 +201,40 @@ static NSString *ShiroLogFontKey(void) {
     if (column + 32.0f < b.size.width) { pad = floorf((b.size.width - column) * 0.5f); width = column; }
     _filter.frame = CGRectMake(pad, 8.0f, width, 30.0f);
     _search.frame = CGRectMake(pad - 4.0f, 42.0f, width + 8.0f, 44.0f);
-    CGFloat footer = 22.0f;
     CGFloat top = 90.0f;
-    plate.frame = CGRectMake(pad, top, width, b.size.height - top - footer - 8.0f);
-    _count.frame = CGRectMake(pad, CGRectGetMaxY(plate.frame) + 2.0f, width, 18.0f);
-    _textView.frame = CGRectInset(plate.bounds, 6, 6);
+    plate.frame = CGRectMake(pad, top, width, b.size.height - top - 10.0f);
+    /* header: badge, two lines of text, two round buttons; the log under it */
+    CGFloat head = 56.0f, edge = 12.0f;
+    CGFloat w = plate.bounds.size.width;
+    _badge.frame = CGRectMake(edge, 8.0f, 40.0f, 40.0f);
+    _reloadButton.frame = CGRectMake(w - edge - 40.0f, 8.0f, 40.0f, 40.0f);
+    _menuButton.frame = CGRectMake(w - edge - 80.0f - 8.0f, 8.0f, 40.0f, 40.0f);
+    CGFloat textLeft = edge + 40.0f + 12.0f;
+    CGFloat textWidth = MAX(0.0f, CGRectGetMinX(_menuButton.frame) - 8.0f - textLeft);
+    _headTitle.frame = CGRectMake(textLeft, 10.0f, textWidth, 20.0f);
+    _count.frame = CGRectMake(textLeft, 30.0f, textWidth, 16.0f);
+    _textView.frame = CGRectMake(6.0f, head, w - 12.0f, MAX(0.0f, plate.bounds.size.height - head - 6.0f));
+}
+
+/* the colours of the header follow the theme, which can change under the screen */
+- (void)styleHeader {
+    UIColor *tonal = ShiroLogTonalFill();
+    _badge.backgroundColor = tonal;
+    _reloadButton.backgroundColor = tonal;
+    _menuButton.backgroundColor = tonal;
+    _badgeIcon.image = TintedIconNamed(@"glyph-logs.png", 22.0f, kAccentBlue);
+    [_reloadButton setImage:TintedIconNamed(@"glyph-reconnect.png", 22.0f, kAccentBlue)
+                   forState:UIControlStateNormal];
+    [_menuButton setImage:TintedIconNamed(@"glyph-copy.png", 22.0f, kAccentBlue)
+                 forState:UIControlStateNormal];
+    _headTitle.textColor = kInk;
+    _count.textColor = kInkMuted;
+}
+
+/* a refresh by hand dissolves the new text in, the timer's own reload does not */
+- (void)reloadPressed {
+    _dissolve = YES;
+    [self loadLogs];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -184,6 +243,14 @@ static NSString *ShiroLogFontKey(void) {
     ShiroApplyScreenChrome(self.view);
     ShiroStyleGlassSegmented(_filter);
     [self layoutLogs];
+    [self styleHeader];
+    /* the card rises into place once, on the entry curve, from rest */
+    if (!_entered) {
+        _entered = YES;
+        UIView *plate = [self.view viewWithTag:7701];
+        if (plate) ShiroMotionEnter(plate, CGAffineTransformMakeTranslation(0.0f, 14.0f), 0.0f,
+                                    SHIRO_MOTION_ENTER, 0.0);
+    }
     _logsVisible = YES;
     if (!_reloadTimer) _reloadTimer = [[NSTimer scheduledTimerWithTimeInterval:3 target:self selector:@selector(loadLogs) userInfo:nil repeats:YES] retain];
     [self loadLogs];
@@ -220,6 +287,11 @@ static NSString *ShiroLogFontKey(void) {
     [_filter release];
     [_search release];
     [_count release];
+    [_badge release];
+    [_badgeIcon release];
+    [_headTitle release];
+    [_menuButton release];
+    [_reloadButton release];
     [_shown release];
     [_allLogs release];
     [_ctl release];
@@ -380,6 +452,20 @@ static NSString *ShiroStatusSection(void) {
         if ([line length]) ++lines;
     [_shown release];
     _shown = lines ? [shown copy] : nil;
+    /* a new source or a refresh by hand dissolves into the old text instead of swapping in one
+       frame, which read as a flash. the timer's reload and typing in the search box change the
+       text on every beat, so those stay instant */
+    BOOL sourceChanged = _renderedFilter != _filter.selectedSegmentIndex;
+    if ((sourceChanged || _dissolve) && !_typing && _textView.window &&
+        [UIView areAnimationsEnabled] && !ShiroReduceMotion()) {
+        CATransition *dissolve = [CATransition animation];
+        dissolve.type = kCATransitionFade;
+        dissolve.duration = 0.24;
+        dissolve.timingFunction = [CAMediaTimingFunction functionWithControlPoints:0.3f :0.0f :0.1f :1.0f];
+        [_textView.layer addAnimation:dissolve forKey:@"shiro.logfade"];
+    }
+    _renderedFilter = _filter.selectedSegmentIndex;
+    _dissolve = NO;
     [self showText:shown];
     _count.textColor = kInkMuted;
     _count.text = lines ? [NSString stringWithFormat:ShiroLocalizedText(@"Lines: %d"), (int)lines] : @"";
@@ -391,7 +477,9 @@ static NSString *ShiroStatusSection(void) {
 
 - (void)searchBar:(UISearchBar *)bar textDidChange:(NSString *)text {
     (void)bar; (void)text;
+    _typing = YES;
     [self filterChanged:_filter];
+    _typing = NO;
 }
 
 - (void)searchBarSearchButtonClicked:(UISearchBar *)bar {
@@ -402,25 +490,19 @@ static NSString *ShiroStatusSection(void) {
     (void)sender;
     if (![_shown length]) return;
     BOOL canShare = NSClassFromString(@"UIActivityViewController") != nil;
-    UIActionSheet *sheet = [[UIActionSheet alloc]
-             initWithTitle:nil
-                  delegate:self
-         cancelButtonTitle:ShiroLocalizedText(@"Cancel")
-    destructiveButtonTitle:nil
-         otherButtonTitles:ShiroLocalizedText(@"Copy"),
-                           canShare ? ShiroLocalizedText(@"Share") : nil, nil];
-    sheet.tag = LOGS_SHEET_ACTIONS;
-    [sheet showInView:self.view];
-    [sheet release];
+    NSArray *labels = canShare ? [NSArray arrayWithObjects:@"Copy", @"Share", nil]
+                               : [NSArray arrayWithObject:@"Copy"];
+    ShiroDialogMenu(nil, nil, labels, ^(NSInteger index) {
+        if (index < 0 || ![_shown length]) return;
+        if (index == 0) {
+            [UIPasteboard generalPasteboard].string = _shown;
+            return;
+        }
+        [self shareShown];
+    });
 }
 
-- (void)actionSheet:(UIActionSheet *)sheet clickedButtonAtIndex:(NSInteger)index {
-    if (sheet.tag != LOGS_SHEET_ACTIONS || index == sheet.cancelButtonIndex || ![_shown length])
-        return;
-    if (index == 0) {
-        [UIPasteboard generalPasteboard].string = _shown;
-        return;
-    }
+- (void)shareShown {
     Class activity = NSClassFromString(@"UIActivityViewController");
     if (!activity) return;
     id controller = [[[activity alloc] performSelector:@selector(initWithActivityItems:applicationActivities:)
