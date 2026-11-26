@@ -1,14 +1,13 @@
 #import "app_common.h"
 #import "ui_theme.h"
 #import "shiro_menus.h"
-#import "text_prompt.h"
+#import "shiro_dialog.h"
 #include <unistd.h>
 #include <math.h>
 #include <CoreFoundation/CoreFoundation.h>
 
-@interface ShiroSettingsController () <UIActionSheetDelegate> {
+@interface ShiroSettingsController () {
     NSDictionary *_settings;
-    UIActionSheet *_sheet;
     CGFloat _groupedInsetX;
 }
 @end
@@ -16,7 +15,7 @@
 - (id)init {
     return [super initWithControl:[[[ShiroControl alloc] initWithSocketPath:SHIRO_SOCK] autorelease]];
 }
-- (void)dealloc { [_settings release]; _sheet.delegate = nil; [_sheet release]; [super dealloc]; }
+- (void)dealloc { [_settings release]; [super dealloc]; }
 - (NSString *)devTitle { return ShiroLocalizedText(@"Settings"); }
 - (const char *)devScreenName { return "settings"; }
 - (void)viewDidLoad {
@@ -32,7 +31,7 @@
 }
 - (NSArray *)rows:(NSInteger)section {
     if (section == 0) return [NSArray arrayWithObjects:@"Connect at startup", @"Reconnect automatically", @"Try another server", @"Reconnect attempts", nil];
-    if (section == 1) return [NSArray arrayWithObjects:@"Theme", @"Falling foxes", @"Language", @"System Logs", @"Backup", nil];
+    if (section == 1) return [NSArray arrayWithObjects:@"Theme", @"Appearance", @"Falling foxes", @"Language", @"System Logs", @"Backup", nil];
     if (section == 2) return [NSArray arrayWithObjects:@"DNS", @"Registration proxy", @"About", nil];
     return [NSArray arrayWithObject:@"Developer settings"];
 }
@@ -140,7 +139,7 @@
     cell.textLabel.font = ShiroFontBody(16, NO); cell.detailTextLabel.font = ShiroFontBody(15, NO);
     ShiroStyleGroupCell(cell, index, [self rows:index.section].count);
     NSString *name = [[self rows:index.section] objectAtIndex:index.row];
-    NSDictionary *glyphs = [NSDictionary dictionaryWithObjectsAndKeys:@"rocket", @"Connect at startup", @"reconnect", @"Reconnect automatically", @"shuffle", @"Try another server", @"repeat", @"Reconnect attempts", @"palette", @"Theme", @"shuffle", @"Falling foxes", @"globe", @"Language", @"logs", @"System Logs", @"backup", @"Backup", @"shield", @"DNS", @"globe", @"Registration proxy", @"info", @"About", @"code", @"Developer settings", nil];
+    NSDictionary *glyphs = [NSDictionary dictionaryWithObjectsAndKeys:@"rocket", @"Connect at startup", @"reconnect", @"Reconnect automatically", @"shuffle", @"Try another server", @"repeat", @"Reconnect attempts", @"palette", @"Theme", @"bolt", @"Appearance", @"shuffle", @"Falling foxes", @"globe", @"Language", @"logs", @"System Logs", @"backup", @"Backup", @"shield", @"DNS", @"globe", @"Registration proxy", @"info", @"About", @"code", @"Developer settings", nil];
     cell.textLabel.text = ShiroLocalizedText(name);
     cell.textLabel.font = ShiroFontBody(16, NO);
     cell.imageView.image = TintedIconNamed([NSString stringWithFormat:@"glyph-%@.png", [glyphs objectForKey:name]], 22, kInk);
@@ -162,7 +161,8 @@
         [sw addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventValueChanged];
         cell.accessoryView = sw;
     } else if (index.section == 0) cell.detailTextLabel.text = [[_settings objectForKey:@"reconnect_max_attempts"] description] ?: @"5";
-    else if ([name isEqualToString:@"Theme"]) cell.detailTextLabel.text = ShiroLocalizedText(ShiroThemeIsLight() ? @"Light" : @"Dark");
+    else if ([name isEqualToString:@"Theme"]) cell.detailTextLabel.text = ShiroLocalizedText(ShiroThemeIsClassic() ? @"Classic" : @"Modern");
+    else if ([name isEqualToString:@"Appearance"]) cell.detailTextLabel.text = ShiroLocalizedText(ShiroThemeIsLight() ? @"Light" : @"Dark");
     else if ([name isEqualToString:@"Language"]) cell.detailTextLabel.text = ShiroLanguageName();
     else if ([name isEqualToString:@"DNS"]) cell.detailTextLabel.text = [_settings objectForKey:@"dns"] ?: @"1.1.1.1";
     else if ([name isEqualToString:@"Registration proxy"]) cell.detailTextLabel.text = ShiroLocalizedText([_settings objectForKey:@"registration_proxy"] ?: @"Off");
@@ -189,8 +189,17 @@
     NSString *name = [[self rows:index.section] objectAtIndex:index.row];
     UIViewController *next = nil;
     if ([name isEqualToString:@"Theme"]) {
-        UIAlertView *alert = [[[UIAlertView alloc] initWithTitle:ShiroLocalizedText(@"Theme") message:nil delegate:self cancelButtonTitle:ShiroLocalizedText(@"Cancel") otherButtonTitles:ShiroLocalizedText(@"Light"), ShiroLocalizedText(@"Dark"), nil] autorelease];
-        alert.tag = 103; [alert show];
+        ShiroDialogMenu(@"Theme", nil, [NSArray arrayWithObjects:@"Modern", @"Classic", nil], ^(NSInteger pick) {
+            if (pick < 0) return;
+            /* the modern theme keeps the id of 1.0.x installs, which is the default family */
+            ShiroThemeApplyId(pick == 0 ? ShiroThemeDefaultId() : @"shiro-classic"); [_tv reloadData];
+        });
+    }
+    else if ([name isEqualToString:@"Appearance"]) {
+        ShiroDialogMenu(@"Appearance", nil, [NSArray arrayWithObjects:@"Light", @"Dark", nil], ^(NSInteger pick) {
+            if (pick < 0) return;
+            ShiroThemeSetLight(pick == 0); [_tv reloadData];
+        });
     }
     else if ([name isEqualToString:@"System Logs"]) next = [[[ShiroLogsController alloc] init] autorelease];
     else if ([name isEqualToString:@"DNS"]) next = [[[ShiroRoutingVC alloc] initWithControl:_ctl] autorelease];
@@ -198,11 +207,15 @@
     else if ([name isEqualToString:@"About"]) next = [[[ShiroAboutController alloc] init] autorelease];
     else if ([name isEqualToString:@"Developer settings"]) next = [[[ShiroDeveloperVC alloc] initWithControl:_ctl page:0] autorelease];
     else if ([name isEqualToString:@"Language"]) {
-        UIAlertView *alert = [[[UIAlertView alloc] initWithTitle:ShiroLocalizedText(@"Language") message:nil delegate:self cancelButtonTitle:ShiroLocalizedText(@"Cancel") otherButtonTitles:@"English", @"Русский", @"中文", nil] autorelease];
-        alert.tag = 100; [alert show];
+        ShiroDialogMenu(@"Language", nil, [NSArray arrayWithObjects:@"English", @"Русский", @"中文", nil], ^(NSInteger pick) {
+            if (pick < 0) return;
+            ShiroSetLanguage((ShiroLanguage)pick); self.title = ShiroLocalizedText(@"Settings"); [_tv reloadData];
+        });
     } else if ([name isEqualToString:@"Reconnect attempts"]) {
-        UIAlertView *alert = [[[UIAlertView alloc] initWithTitle:ShiroLocalizedText(name) message:nil delegate:self cancelButtonTitle:ShiroLocalizedText(@"Cancel") otherButtonTitles:@"3", @"5", @"10", nil] autorelease];
-        alert.tag = 101; [alert show];
+        ShiroDialogMenu(name, nil, [NSArray arrayWithObjects:@"3", @"5", @"10", nil], ^(NSInteger pick) {
+            if (pick < 0) return;
+            [self preference:@"reconnect_max_attempts" value:[[NSArray arrayWithObjects:@3, @5, @10, nil] objectAtIndex:(NSUInteger)pick]];
+        });
     } else if ([name isEqualToString:@"Backup"]) [self backupMenu];
     if (next) [self.navigationController pushViewController:next animated:YES];
 }
@@ -211,44 +224,35 @@
     if ([[_settings objectForKey:@"enabled"] boolValue]) {
         [self devSay:ShiroLocalizedText(@"Registration proxy") message:ShiroLocalizedText(@"Disconnect first")]; return;
     }
-    [ShiroTextPromptVC presentFrom:self title:ShiroLocalizedText(@"Registration proxy")
-        message:ShiroLocalizedText(@"SOCKS5 or HTTP URL. Empty disables.")
-        text:@"" keyboard:UIKeyboardTypeURL confirm:ShiroLocalizedText(@"Save") handler:^(NSString *text) {
+    ShiroDialogPrompt(@"Registration proxy", @"SOCKS5 or HTTP URL. Empty disables.",
+        @"", nil, UIKeyboardTypeURL, @"Save", ^(NSString *text) {
+        if (!text) return;
         NSDictionary *request = [NSDictionary dictionaryWithObjectsAndKeys:@"registrationProxy", @"command", text, @"url", nil];
         [_ctl request:request reply:^(NSDictionary *reply, NSString *error) {
             if (error) [self devSay:ShiroLocalizedText(@"Registration proxy") message:ShiroHumanReadableError(error)];
             else { [_settings release]; _settings = [reply copy]; }
             [_tv reloadData];
         }];
-    }];
-}
-- (void)alertView:(UIAlertView *)alert clickedButtonAtIndex:(NSInteger)index {
-    if (index == alert.cancelButtonIndex) return;
-    if (alert.tag == 100) { ShiroSetLanguage((ShiroLanguage)(index - 1)); self.title = ShiroLocalizedText(@"Settings"); [_tv reloadData]; }
-    else if (alert.tag == 101) [self preference:@"reconnect_max_attempts" value:[[NSArray arrayWithObjects:@3, @5, @10, nil] objectAtIndex:index - 1]];
-    else if (alert.tag == 102) [self restoreBackup];
-    else if (alert.tag == 103) { ShiroThemeSetLight(index == 1); [_tv reloadData]; }
-    else [super alertView:alert clickedButtonAtIndex:index];
+    });
 }
 - (void)backupMenu {
-    _sheet.delegate = nil; [_sheet release];
-    _sheet = [[UIActionSheet alloc] initWithTitle:ShiroLocalizedText(@"Backup") delegate:self cancelButtonTitle:ShiroLocalizedText(@"Cancel") destructiveButtonTitle:nil otherButtonTitles:ShiroLocalizedText(@"Export"), ShiroLocalizedText(@"Import from clipboard"), nil];
-    [_sheet showInView:self.view];
+    ShiroDialogMenu(@"Backup", nil, [NSArray arrayWithObjects:@"Export", @"Import from clipboard", nil], ^(NSInteger pick) {
+        if (pick == 0) [self exportBackup];
+        else if (pick == 1) [self confirmRestore];
+    });
 }
-- (void)actionSheet:(UIActionSheet *)sheet clickedButtonAtIndex:(NSInteger)index {
-    if (index == sheet.cancelButtonIndex) return;
-    if (index == 0) {
-        if (!_settings) { [self devSay:ShiroLocalizedText(@"Backup") message:ShiroLocalizedText(@"Daemon is unreachable")]; return; }
-        NSMutableDictionary *backup = [NSMutableDictionary dictionaryWithObject:@"shiro-settings-1" forKey:@"format"];
-        for (NSString *key in [NSArray arrayWithObjects:@"direct", @"block", @"dns", @"trace", nil])
-            if ([_settings objectForKey:key]) [backup setObject:[_settings objectForKey:key] forKey:key];
-        NSData *data = [NSJSONSerialization dataWithJSONObject:backup options:NSJSONWritingPrettyPrinted error:NULL];
-        [UIPasteboard generalPasteboard].string = [[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] autorelease];
-        [self devSay:ShiroLocalizedText(@"Backup") message:ShiroLocalizedText(@"Copied to clipboard")];
-    } else {
-        UIAlertView *alert = [[[UIAlertView alloc] initWithTitle:ShiroLocalizedText(@"Replace configuration?") message:ShiroLocalizedText(@"Routing and DNS will be replaced by the backup in the clipboard. Disconnect first.") delegate:self cancelButtonTitle:ShiroLocalizedText(@"Cancel") otherButtonTitles:ShiroLocalizedText(@"Replace"), nil] autorelease];
-        alert.tag = 102; [alert show];
-    }
+- (void)exportBackup {
+    if (!_settings) { [self devSay:ShiroLocalizedText(@"Backup") message:ShiroLocalizedText(@"Daemon is unreachable")]; return; }
+    NSMutableDictionary *backup = [NSMutableDictionary dictionaryWithObject:@"shiro-settings-1" forKey:@"format"];
+    for (NSString *key in [NSArray arrayWithObjects:@"direct", @"block", @"dns", @"trace", nil])
+        if ([_settings objectForKey:key]) [backup setObject:[_settings objectForKey:key] forKey:key];
+    NSData *data = [NSJSONSerialization dataWithJSONObject:backup options:NSJSONWritingPrettyPrinted error:NULL];
+    [UIPasteboard generalPasteboard].string = [[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] autorelease];
+    [self devSay:ShiroLocalizedText(@"Backup") message:ShiroLocalizedText(@"Copied to clipboard")];
+}
+- (void)confirmRestore {
+    ShiroDialogConfirm(@"Replace configuration?", @"Routing and DNS will be replaced by the backup in the clipboard. Disconnect first.",
+                       @"Replace", NO, ^{ [self restoreBackup]; });
 }
 - (void)restoreBackup {
     NSString *text = [UIPasteboard generalPasteboard].string;

@@ -455,6 +455,7 @@ static void ShiroBuildTranslations(void) {
     ShiroAddTranslation(@"Install failed", @"Ошибка установки");
     ShiroAddTranslation(@"Installing", @"Установка");
     ShiroAddTranslation(@"Light", @"Светлая");
+    ShiroAddTranslation(@"Modern", @"Современная");
     ShiroAddTranslation(@"Language", @"Язык");
     ShiroAddTranslation(@"Manual", @"Вручную");
     ShiroAddTranslation(@"NAME", @"НАЗВАНИЕ");
@@ -547,6 +548,7 @@ static void ShiroBuildTranslations(void) {
     ShiroAddTranslation(@"HWID requires a Cookie request header", @"HWID требует заголовок Cookie");
     ShiroAddTranslation(@"Request header", @"Заголовок запроса");
     ShiroAddTranslation(@"System Logs", @"Системные логи");
+    ShiroAddTranslation(@"Logs", @"Логи");
     ShiroAddTranslation(@"Themes", @"Темы");
     ShiroAddTranslation(@"Update", @"Обновить");
     ShiroAddTranslation(@"Update Shiro", @"Обновить Shiro");
@@ -791,6 +793,13 @@ static void ShiroBuildTranslations(void) {
     ShiroAddTranslation(@"Done reordering", @"Закончить перестановку");
     ShiroAddTranslation(@"Reorder manual servers", @"Переставить свои серверы");
     ShiroAddTranslation(@"Session", @"Сеанс");
+    ShiroAddTranslation(@"Throughput", @"Пропускная способность");
+    ShiroAddTranslation(@"Last %d seconds", @"Последние %d с");
+    ShiroAddTranslation(@"Peak %@", @"Пик %@");
+    ShiroAddTranslation(@"Average speed", @"Средняя скорость");
+    ShiroAddTranslation(@"Peak download", @"Пик загрузки");
+    ShiroAddTranslation(@"Peak upload", @"Пик отдачи");
+    ShiroAddTranslation(@"Total transferred", @"Всего передано");
     ShiroAddTranslation(@"Subscriptions", @"Подписки");
     ShiroAddTranslation(@"Status", @"Состояние");
     ShiroAddTranslation(@"Uptime", @"Время работы");
@@ -920,7 +929,9 @@ static void ShiroBuildTranslations(void) {
     ShiroAddChineseTranslation(@"Play a short meow on every button tap.", @"每次点击按钮时播放短猫叫声。");
     ShiroAddChineseTranslation(@"Dark", @"深色");
     ShiroAddChineseTranslation(@"Light", @"浅色");
+    ShiroAddChineseTranslation(@"Modern", @"现代");
     ShiroAddChineseTranslation(@"System Logs", @"系统日志");
+    ShiroAddChineseTranslation(@"Logs", @"日志");
     ShiroAddChineseTranslation(@"Export backup", @"导出备份");
     ShiroAddChineseTranslation(@"Restore backup", @"恢复备份");
     ShiroAddChineseTranslation(@"Save a config file to Documents", @"将配置文件保存到 Documents");
@@ -1004,6 +1015,13 @@ static void ShiroBuildTranslations(void) {
     ShiroAddChineseTranslation(@"Done reordering", @"完成排序");
     ShiroAddChineseTranslation(@"Reorder manual servers", @"调整手动服务器顺序");
     ShiroAddChineseTranslation(@"Session", @"会话");
+    ShiroAddChineseTranslation(@"Throughput", @"吞吐量");
+    ShiroAddChineseTranslation(@"Last %d seconds", @"最近 %d 秒");
+    ShiroAddChineseTranslation(@"Peak %@", @"峰值 %@");
+    ShiroAddChineseTranslation(@"Average speed", @"平均速度");
+    ShiroAddChineseTranslation(@"Peak download", @"下载峰值");
+    ShiroAddChineseTranslation(@"Peak upload", @"上传峰值");
+    ShiroAddChineseTranslation(@"Total transferred", @"传输总量");
     ShiroAddChineseTranslation(@"Subscriptions", @"订阅");
     ShiroAddChineseTranslation(@"Status", @"状态");
     ShiroAddChineseTranslation(@"Uptime", @"运行时间");

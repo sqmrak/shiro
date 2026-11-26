@@ -5,6 +5,7 @@
 #include <sys/sysctl.h>
 #import "ui_theme.h"
 #import "app_common.h"
+#import "shiro_dialog.h"
 #import "crash_report.h"
 #import "boykisser_field.h"
 
@@ -498,38 +499,22 @@ static UILabel *AboutHeroLabel(UIView *host, UIFont *font) {
     if ([action length]) [self performSelector:NSSelectorFromString(action)];
 }
 
-- (void)dismissHint:(UIAlertView *)hint {
-    [hint dismissWithClickedButtonIndex:0 animated:YES];
-}
-
 - (void)versionTapped {
     if (ShiroDevMenuEnabled()) return; /* the section turns itself off */
     int left = ShiroDevMenuTapsLeft();
     if (left > 0) {
 /* silence until the third tap, so an accidental double tap says nothing */
         if (left > 2) return;
-        UIAlertView *hint = [[[UIAlertView alloc]
-            initWithTitle:nil
-                  message:[NSString stringWithFormat:
-                           ShiroLocalizedText(@"%d more"), left]
-                 delegate:nil
-        cancelButtonTitle:nil
-        otherButtonTitles:nil] autorelease];
+        /* no button: the card closes itself, and a tap outside does nothing */
+        ShiroDialog *hint = [ShiroDialog dialogWithTitle:nil
+            message:[NSString stringWithFormat:ShiroLocalizedText(@"%d more"), left]];
         [hint show];
-/* dismissWithClickedButtonIndex:animated: takes two scalars, which
-   performSelector:withObject: cannot pass, so the delay goes through a method
-   that takes the alert itself */
-        [self performSelector:@selector(dismissHint:) withObject:hint afterDelay:0.6];
+        [hint performSelector:@selector(dismiss) withObject:nil afterDelay:0.6];
         return;
     }
     ShiroSetDevMenuEnabled(YES);
-    UIAlertView *done = [[[UIAlertView alloc]
-        initWithTitle:ShiroLocalizedText(@"Developer settings")
-              message:ShiroLocalizedText(@"Developer settings are now visible in Settings. Tap the section heading five times to hide them again.")
-             delegate:nil
-    cancelButtonTitle:@"OK"
-    otherButtonTitles:nil] autorelease];
-    [done show];
+    ShiroDialogAlert(ShiroLocalizedText(@"Developer settings"),
+                     ShiroLocalizedText(@"Developer settings are now visible in Settings. Tap the section heading five times to hide them again."));
 }
 
 - (void)githubPressed {

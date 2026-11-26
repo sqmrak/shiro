@@ -15,16 +15,20 @@ static inline void ShiroScrollViewUseManualInsets(UIScrollView *scroll) {
 /* ios 4.3 has only the modal calls that ios 5 replaced with completion blocks */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+/* the app draws the modal slide itself, see shiro_animation.m */
+extern void ShiroMotionPresent(UIViewController *host, UIViewController *vc);
+extern void ShiroMotionDismiss(UIViewController *vc, void (^completion)(void));
+
 static inline void ShiroPresentModal(UIViewController *host, UIViewController *vc) {
     if ([host respondsToSelector:@selector(presentViewController:animated:completion:)])
-        [host presentViewController:vc animated:YES completion:nil];
+        ShiroMotionPresent(host, vc);
     else
         [host presentModalViewController:vc animated:YES];
 }
 
 static inline void ShiroDismissModal(UIViewController *vc, void (^completion)(void)) {
     if ([vc respondsToSelector:@selector(dismissViewControllerAnimated:completion:)]) {
-        [vc dismissViewControllerAnimated:YES completion:completion];
+        ShiroMotionDismiss(vc, completion);
         return;
     }
     /* ios 4.3 has no completion block, and a follow up presenting over a modal

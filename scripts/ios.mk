@@ -13,9 +13,10 @@ B := build/ios
 INC := $(addprefix -I,$(wildcard core/*)) -Icommon -Idaemon -Iapp/controllers -Iapp/support -Iapp/appearance -Iapp/views -Iapp/theme
 CFLAGS := -std=c99 -O2 -g -Wall -Wextra -Werror -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wconversion -Wno-sign-conversion $(INC) -MMD -MP
 MFLAGS := -std=gnu99 -O2 -g -fno-objc-arc -fblocks -Wall -Wextra -Werror -Wno-unused-parameter $(INC) -MMD -MP
-CORE := $(wildcard core/*/*.c)
+# the interface motion curves belong to the app, the daemon has no use for them
+CORE := $(filter-out core/base/shiro_motion.c,$(wildcard core/*/*.c))
 DAEMON := $(wildcard daemon/*.c daemon/*.m) common/ShiroControl.m
-APP := $(wildcard app/*/*.m) common/ShiroControl.m core/net/shiro_control_io.c core/base/shiro_clock.c core/base/shiro_log.c core/base/shiro_device_model.c
+APP := $(wildcard app/*/*.m) common/ShiroControl.m core/net/shiro_control_io.c core/base/shiro_clock.c core/base/shiro_log.c core/base/shiro_motion.c core/base/shiro_device_model.c
 STATUS := status/shiro_status.m
 V7 := -target armv7-apple-ios5.0 -isysroot $(SHIRO_SDK_V7) -I$(SHIRO_OPENSSL_V7)/include
 VE := -target arm64e-apple-ios14.0 -isysroot $(SHIRO_SDK_VE) -I$(SHIRO_OPENSSL_VE)/include
@@ -60,7 +61,7 @@ $(B)/Shiro.app/Shiro: $(B)/arm64e-modern/Shiro $(B)/armv7/Shiro $(B)/arm64/Shiro
 	cp packaging/Info.plist $(B)/Shiro.app/
 	cp resources/shiro/*.pem assets/shiro_fox.png LICENSE $(B)/Shiro.app/
 	cp resources/fonts/Rubik-*.ttf resources/fonts/Rubik-LICENSE.txt $(B)/Shiro.app/
-	cp assets/glyph-*.png assets/sqmrak.jpg assets/qwertyu1opz.png assets/cloudflare.png $(B)/Shiro.app/
+	cp assets/glyph-*.png assets/sticker-popup*.png assets/sqmrak.jpg assets/qwertyu1opz.png assets/cloudflare.png $(B)/Shiro.app/
 	$(SHIRO_PYTHON) scripts/icons.py
 $(B)/shirod: $(B)/armv7/shirod $(B)/arm64/shirod $(B)/arm64e-modern/shirod
 	'$(SHIRO_TC)/lipo' -create $^ -output $@

@@ -41,7 +41,7 @@ NSString *ShiroAboutTLSMode(void);
 @end
 @interface ShiroAboutController : ShiroScreenController
 @end
-@interface ShiroLogsController : ShiroScreenController <UISearchBarDelegate, UIActionSheetDelegate>
+@interface ShiroLogsController : ShiroScreenController <UISearchBarDelegate>
 @end
 @interface ShiroStatisticsController : ShiroScreenController
 @end

@@ -1,5 +1,6 @@
 #import "ui_theme.h"
 #import "crash_report.h"
+#import "shiro_animation.h"
 #include <math.h>
 #include <objc/runtime.h>
 #include <objc/message.h>
@@ -51,13 +52,12 @@ void ShiroThemeCrossfadeWindows(void) {
     veil.userInteractionEnabled = NO;
     veil.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [w addSubview:veil];
-    [UIView animateWithDuration:0.30
-                     animations:^{ veil.alpha = 0.0f; }
-                     completion:^(BOOL done) {
-                         (void)done;
-                         [veil removeFromSuperview];
-                         [veil release];
-                     }];
+    ShiroMotionAnimate(veil, CGAffineTransformIdentity, 0.0f, SHIRO_MOTION_ENTER, 0.0,
+                       ^(BOOL done) {
+        (void)done;
+        [veil removeFromSuperview];
+        [veil release];
+    });
 }
 
 UIFont *ShiroFontTitle(CGFloat size) {
@@ -920,24 +920,20 @@ void ShiroPressPop(UIView *view, BOOL pressed) {
     if (!view) return;
 /* material shows a press as a ripple, and a surface there never changes size */
     if (ShiroThemeIsMaterial()) return;
-    CGAffineTransform target = pressed
-        ? CGAffineTransformMakeScale(0.965f, 0.965f)
-        : CGAffineTransformIdentity;
-    if (CGAffineTransformEqualToTransform(view.transform, target)) return;
-    SuspendRasterization(view);
-    /* the release has to spring, the press must not: a bouncy press feels
-       like lag when the finger is still down */
     if (pressed) {
-        ShiroAnimate(0.10, ^{ view.transform = target; }, NULL);
-    } else {
-        ShiroAnimateSpring(0.30, 0, ^{ view.transform = target; }, ^(BOOL done) {
-            (void)done;
-            /* an older release animation can finish after a second press. do
-               not freeze that pressed frame into the raster cache */
-            if (CGAffineTransformIsIdentity(view.transform))
-                RestoreRasterization(view);
-        });
+        SuspendRasterization(view);
+        ShiroMotionBounce(view, YES, 0.035f);
+        return;
     }
+    ShiroMotionBounce(view, NO, 0.035f);
+    /* the cache comes back once the release has settled, unless a second press
+       began meanwhile: a pressed frame must not be frozen into it. the release
+       runs on the wobble curve, so the check waits for its whole duration */
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
+                                 (int64_t)((shiro_motion_duration(SHIRO_MOTION_WOBBLE) + 0.05) * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        if (!ShiroMotionBouncing(view)) RestoreRasterization(view);
+    });
 }
 
 UIFont *ShiroFontDisplay(CGFloat size) {

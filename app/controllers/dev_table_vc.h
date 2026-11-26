@@ -9,8 +9,7 @@
 /* every developer screen is a grouped table in the current theme with the same
    nav chrome, so the setup lives here once instead of in each of them */
 @interface ShiroTableController : ShiroScreenController <UITableViewDataSource,
-                                          UITableViewDelegate,
-                                          UIAlertViewDelegate> {
+                                          UITableViewDelegate> {
 @protected
     UITableView  *_tv;
     ShiroControl *_ctl;
@@ -34,10 +33,7 @@
 /* an alert with one dismiss button, used for every result this screen reports */
 - (void)devSay:(NSString *)title message:(NSString *)message;
 
-/* a subclass that shows its own alerts hands the ones it does not own back */
-- (void)alertView:(UIAlertView *)alert clickedButtonAtIndex:(NSInteger)index;
-
-/* a destructive action always asks first. tag is handed back in the delegate */
+/* a destructive action always asks first. tag is handed back to devConfirmed: */
 - (void)devConfirm:(NSString *)title message:(NSString *)message
             button:(NSString *)button tag:(NSInteger)tag;
 

@@ -1,7 +1,7 @@
 #import "shiro_menus.h"
 #import "app_common.h"
 #import "ui_theme.h"
-#import "text_prompt.h"
+#import "shiro_dialog.h"
 
 @interface ShiroNetworksVC : ShiroTableController {
     NSString *_key;
@@ -49,14 +49,15 @@
         [self.navigationController pushViewController:rules animated:YES]; return;
     }
     if (!_snapshot) { [self devSay:@"DNS" message:ShiroLocalizedText(@"Daemon is unreachable")]; return; }
-    [ShiroTextPromptVC presentFrom:self title:@"DNS" message:ShiroLocalizedText(@"Upstream IPv4 address") text:[_snapshot objectForKey:@"dns"] keyboard:UIKeyboardTypeNumbersAndPunctuation confirm:ShiroLocalizedText(@"Save") handler:^(NSString *text) {
+    ShiroDialogPrompt(@"DNS", @"Upstream IPv4 address", [_snapshot objectForKey:@"dns"], nil, UIKeyboardTypeNumbersAndPunctuation, @"Save", ^(NSString *text) {
+        if (!text) return;
         NSMutableDictionary *request = [NSMutableDictionary dictionaryWithDictionary:_snapshot];
         [request setObject:@"settings" forKey:@"command"]; [request setObject:text forKey:@"dns"];
         [_ctl request:request reply:^(NSDictionary *reply, NSString *error) {
             if (error) [self devSay:@"DNS" message:ShiroHumanReadableError(error)];
             else { [_snapshot release]; _snapshot = [reply copy]; [_tv reloadData]; }
         }];
-    }];
+    });
 }
 @end
 
@@ -103,9 +104,10 @@
 }
 - (void)add {
     if (!_snapshot || _saving) return;
-    [ShiroTextPromptVC presentFrom:self title:ShiroLocalizedText(@"Add rule") message:ShiroLocalizedText(@"IPv4 network/prefix") text:@"" keyboard:UIKeyboardTypeNumbersAndPunctuation confirm:ShiroLocalizedText(@"Add") handler:^(NSString *text) {
+    ShiroDialogPrompt(@"Add rule", @"IPv4 network/prefix", @"", nil, UIKeyboardTypeNumbersAndPunctuation, @"Add", ^(NSString *text) {
+        if (!text) return;
         NSMutableArray *list = [[_networks mutableCopy] autorelease]; [list addObject:text]; [self save:list];
-    }];
+    });
 }
 - (BOOL)tableView:(UITableView *)tv canEditRowAtIndexPath:(NSIndexPath *)index { return !_saving; }
 - (void)tableView:(UITableView *)tv commitEditingStyle:(UITableViewCellEditingStyle)style forRowAtIndexPath:(NSIndexPath *)index {

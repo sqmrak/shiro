@@ -1,4 +1,5 @@
 #import "app_common.h"
+#import "shiro_animation.h"
 #import "home_view.h"
 #import "boykisser_field.h"
 #import "ui_theme.h"
@@ -126,7 +127,7 @@
 }
 - (void)present:(UIViewController *)controller {
     controller.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(closePresented)] autorelease];
-    UINavigationController *nav = [[[UINavigationController alloc] initWithRootViewController:controller] autorelease];
+    UINavigationController *nav = [[[ShiroNavigationController alloc] initWithRootViewController:controller] autorelease];
     StyleNavBarClassic(nav); ShiroPresentModal(self, nav);
 }
 - (void)closePresented { ShiroDismissModal(self, nil); }

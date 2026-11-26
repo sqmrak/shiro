@@ -2,6 +2,8 @@
 
 #import "control_client.h"
 #import "ui_theme.h"
+#import "shiro_dialog.h"
+#import "shiro_animation.h"
 #import "app_common.h"
 #import "crash_report.h"
 
@@ -118,6 +120,12 @@
     [super viewWillAppear:animated];
     if (self.navigationController)
         StyleNavBarClassic(self.navigationController);
+}
+
+/* the rows of a screen rise in once, the first time it is on show */
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    ShiroMotionStaggerRows(_tv);
 }
 
 - (void)devThemeDidChange:(NSNotification *)n {
@@ -241,32 +249,14 @@
 }
 
 - (void)devSay:(NSString *)title message:(NSString *)message {
-    UIAlertView *a = [[[UIAlertView alloc]
-        initWithTitle:title
-              message:message
-             delegate:nil
-    cancelButtonTitle:@"OK"
-    otherButtonTitles:nil] autorelease];
-    [a show];
+    ShiroDialogAlert(title, message);
 }
 
 /* nothing on these screens is undone by tapping again, so each one asks before
    it runs and names what it will remove */
 - (void)devConfirm:(NSString *)title message:(NSString *)message
             button:(NSString *)button tag:(NSInteger)tag {
-    UIAlertView *a = [[[UIAlertView alloc]
-        initWithTitle:title
-              message:message
-             delegate:self
-    cancelButtonTitle:ShiroLocalizedText(@"Cancel")
-    otherButtonTitles:button, nil] autorelease];
-    a.tag = tag;
-    [a show];
-}
-
-- (void)alertView:(UIAlertView *)alert clickedButtonAtIndex:(NSInteger)index {
-    if (index == alert.cancelButtonIndex) return;
-    [self devConfirmed:alert.tag];
+    ShiroDialogConfirm(title, message, button, YES, ^{ [self devConfirmed:tag]; });
 }
 
 @end
@@ -339,13 +329,7 @@
 
 - (void)copyBody {
     [[UIPasteboard generalPasteboard] setString:_body ?: @""];
-    UIAlertView *done = [[[UIAlertView alloc]
-        initWithTitle:_pageTitle
-              message:ShiroLocalizedText(@"Copied to the clipboard.")
-             delegate:nil
-    cancelButtonTitle:@"OK"
-    otherButtonTitles:nil] autorelease];
-    [done show];
+    ShiroDialogAlert(_pageTitle, @"Copied to the clipboard.");
 }
 
 @end
