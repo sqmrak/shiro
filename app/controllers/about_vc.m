@@ -1,3 +1,4 @@
+#include "shiro_device_model.h"
 #import <UIKit/UIKit.h>
 #import <QuartzCore/QuartzCore.h>
 #include <objc/message.h>
@@ -41,7 +42,8 @@ static NSString *AboutModel(void) {
         len > sizeof machine)
         return [[UIDevice currentDevice] model];
     machine[sizeof machine - 1] = '\0';
-    NSString *code = [NSString stringWithUTF8String:machine];
+    const char *name = shiro_device_model_name(machine);
+    NSString *code = [NSString stringWithUTF8String:name ? name : machine];
     return [code length] ? code : [[UIDevice currentDevice] model];
 }
 

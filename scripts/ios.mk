@@ -15,7 +15,7 @@ CFLAGS := -std=c99 -O2 -g -Wall -Wextra -Werror -Wshadow -Wstrict-prototypes -Wm
 MFLAGS := -std=gnu99 -O2 -g -fno-objc-arc -fblocks -Wall -Wextra -Werror -Wno-unused-parameter $(INC) -MMD -MP
 CORE := $(wildcard core/*/*.c)
 DAEMON := $(wildcard daemon/*.c daemon/*.m) common/ShiroControl.m
-APP := $(wildcard app/*/*.m) common/ShiroControl.m core/net/shiro_control_io.c core/base/shiro_clock.c core/base/shiro_log.c
+APP := $(wildcard app/*/*.m) common/ShiroControl.m core/net/shiro_control_io.c core/base/shiro_clock.c core/base/shiro_log.c core/base/shiro_device_model.c
 STATUS := status/shiro_status.m
 V7 := -target armv7-apple-ios5.0 -isysroot $(SHIRO_SDK_V7) -I$(SHIRO_OPENSSL_V7)/include
 VE := -target arm64e-apple-ios14.0 -isysroot $(SHIRO_SDK_VE) -I$(SHIRO_OPENSSL_VE)/include
