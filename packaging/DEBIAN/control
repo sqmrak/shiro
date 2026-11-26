@@ -7,4 +7,4 @@ Maintainer: sqmrak
 Author: sqmrak
 Section: Networking
 Priority: optional
-Depends: firmware (>= 5.0)
+Depends: firmware (>= 5.0), firmware (<< 12.0) | ellekit
