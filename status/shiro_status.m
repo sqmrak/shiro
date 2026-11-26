@@ -106,6 +106,11 @@ static BOOL gShiroVPNForced = NO;
 static BOOL (*gShiroOrigUsingVPN)(id, SEL) = NULL;
 static void (*gShiroOrigUpdateVPNItem)(id, SEL) = NULL;
 
+typedef struct {
+    long depth;
+    BOOL notified;
+} ShiroThreadState;
+
 static pthread_key_t gShiroUpdateDepthKey;
 static pthread_once_t gShiroUpdateDepthOnce = PTHREAD_ONCE_INIT;
 
@@ -113,15 +118,15 @@ static void ShiroUpdateDepthKeyInit(void) {
     pthread_key_create(&gShiroUpdateDepthKey, free);
 }
 
-/* one counter per thread, not a process-wide flag: statuskit does not promise
+/* one state per thread, not a process-wide flag: statuskit does not promise
    the vpn item is recomputed on the main thread, and a global would let a
    forced answer leak into a getter call a different thread makes for an
    unrelated item while this thread is still inside its own update */
-static long *ShiroUpdateDepthSlot(void) {
+static ShiroThreadState *ShiroUpdateDepthSlot(void) {
     pthread_once(&gShiroUpdateDepthOnce, ShiroUpdateDepthKeyInit);
-    long *slot = pthread_getspecific(gShiroUpdateDepthKey);
+    ShiroThreadState *slot = pthread_getspecific(gShiroUpdateDepthKey);
     if (!slot) {
-        slot = calloc(1, sizeof(long));
+        slot = calloc(1, sizeof(*slot));
         if (slot) pthread_setspecific(gShiroUpdateDepthKey, slot);
     }
     return slot;
@@ -140,9 +145,122 @@ static NSString * const kShiroAggregators[] = {
 static BOOL ShiroUsingVPNConnection(id self, SEL _cmd) {
     BOOL original = gShiroOrigUsingVPN ? gShiroOrigUsingVPN(self, _cmd) : NO;
     if (!gShiroVPNForced) return original;
-    long *depth = ShiroUpdateDepthSlot();
-    if (!depth || *depth <= 0) return original;
+    ShiroThreadState *state = ShiroUpdateDepthSlot();
+    if (!state || state->depth <= 0) return original;
     return YES;
+}
+
+static Class gShiroItemOwnerClass = Nil;
+static BOOL gShiroIsAggregator = NO;
+static BOOL gShiroSystemVPNForced = NO;
+static BOOL gShiroKVCFailureLogged = NO;
+static int gShiroItemIndex = -1;
+static void (*gShiroOrigNotifyInt)(id, SEL, int) = NULL;
+static void (*gShiroOrigNotifyLong)(id, SEL, long) = NULL;
+
+/* ios 13 and later keep the vpn item as a bool entry of the status data, and
+   StatusKit draws the icon from that entry instead of asking telephony. the
+   entry is written under the aggregator's own lock-step: seeded before the
+   original update, so a changed value makes it announce the item index, then
+   set and announced again after it */
+static BOOL ShiroEntryIsYes(id entry) {
+    if (!entry || ![entry respondsToSelector:@selector(boolValue)]) return NO;
+    if ([entry respondsToSelector:@selector(isEnabled)]) {
+        BOOL (*enabled)(id, SEL) = (BOOL (*)(id, SEL))[entry methodForSelector:@selector(isEnabled)];
+        if (!enabled(entry, @selector(isEnabled))) return NO;
+    }
+    BOOL (*value)(id, SEL) = (BOOL (*)(id, SEL))[entry methodForSelector:@selector(boolValue)];
+    return value(entry, @selector(boolValue));
+}
+
+static BOOL ShiroHasKey(id obj, const char *ivar, SEL getter) {
+    return obj && ((getter && [obj respondsToSelector:getter]) ||
+                   class_getInstanceVariable([obj class], ivar) != NULL);
+}
+
+static BOOL ShiroSetSystemVPNEntry(id aggregator, Class entryClass, BOOL enabled,
+                                   BOOL useDisabledEntry, BOOL onlyIfNotYes) {
+    if (!aggregator || !entryClass) return NO;
+    if (!ShiroHasKey(aggregator, "_data", @selector(_data))) {
+        if (!gShiroKVCFailureLogged) {
+            gShiroKVCFailureLogged = YES;
+            ShiroWriteStatus(@"aggregator has no _data key for KVC");
+        }
+        return NO;
+    }
+    id data = [aggregator valueForKey:@"_data"];
+    if (!data) return NO;
+    if (onlyIfNotYes && ShiroHasKey(data, "_vpnEntry", @selector(vpnEntry)) &&
+        ShiroEntryIsYes([data valueForKey:@"vpnEntry"]))
+        return YES;
+    if (!ShiroHasKey(data, "_vpnEntry", @selector(setVpnEntry:))) {
+        if (!gShiroKVCFailureLogged) {
+            gShiroKVCFailureLogged = YES;
+            ShiroWriteStatus(@"status data has no vpnEntry key for KVC");
+        }
+        return NO;
+    }
+    id entry = nil;
+    if (!enabled && useDisabledEntry && [entryClass respondsToSelector:@selector(disabledEntry)]) {
+        id (*make)(id, SEL) = (id (*)(id, SEL))[entryClass methodForSelector:@selector(disabledEntry)];
+        entry = make((id)entryClass, @selector(disabledEntry));
+    } else if ([entryClass respondsToSelector:@selector(entryWithBoolValue:)]) {
+        id (*make)(id, SEL, BOOL) = (id (*)(id, SEL, BOOL))[entryClass methodForSelector:@selector(entryWithBoolValue:)];
+        entry = make((id)entryClass, @selector(entryWithBoolValue:), enabled);
+    }
+    if (!entry) return NO;
+    [data setValue:entry forKey:@"vpnEntry"];
+    return YES;
+}
+
+static void ShiroNotifyItemCommon(int index) {
+    ShiroThreadState *state = ShiroUpdateDepthSlot();
+    if (state && state->depth > 0) {
+        gShiroItemIndex = index;
+        state->notified = YES;
+    }
+}
+
+static void ShiroNotifyItemInt(id self, SEL _cmd, int index) {
+    ShiroNotifyItemCommon(index);
+    if (gShiroOrigNotifyInt) gShiroOrigNotifyInt(self, _cmd, index);
+}
+
+static void ShiroNotifyItemLong(id self, SEL _cmd, long index) {
+    ShiroNotifyItemCommon((int)index);
+    if (gShiroOrigNotifyLong) gShiroOrigNotifyLong(self, _cmd, index);
+}
+
+/* learn the vpn item index from the aggregator's own announcement during a
+   seeded update, so it can be announced again after the entry is set */
+static void ShiroInstallNotifyHook(Class cls) {
+    if (gShiroOrigNotifyInt || gShiroOrigNotifyLong) return;
+    Method method = class_getInstanceMethod(cls, @selector(_notifyItemChanged:));
+    if (!method || method_getNumberOfArguments(method) != 3) return;
+    char ret[8] = "", arg[8] = "";
+    method_getReturnType(method, ret, sizeof ret);
+    method_getArgumentType(method, 2, arg, sizeof arg);
+    if (ret[0] != 'v') return;
+    if (arg[0] == 'q' || arg[0] == 'Q' || arg[0] == 'l' || arg[0] == 'L')
+        gShiroOrigNotifyLong = (void (*)(id, SEL, long))method_setImplementation(method, (IMP)ShiroNotifyItemLong);
+    else if (arg[0] == 'i' || arg[0] == 'I')
+        gShiroOrigNotifyInt = (void (*)(id, SEL, int))method_setImplementation(method, (IMP)ShiroNotifyItemInt);
+}
+
+static void ShiroAnnounceItem(id aggregator) {
+    SEL sel = @selector(_notifyItemChanged:);
+    if (gShiroItemIndex >= 0 && [aggregator respondsToSelector:sel]) {
+        Method method = class_getInstanceMethod([aggregator class], sel);
+        char arg[8] = "";
+        if (method && method_getNumberOfArguments(method) >= 3) method_getArgumentType(method, 2, arg, sizeof arg);
+        IMP imp = [aggregator methodForSelector:sel];
+        if (arg[0] == 'q' || arg[0] == 'Q' || arg[0] == 'l' || arg[0] == 'L')
+            ((void (*)(id, SEL, long))imp)(aggregator, sel, (long)gShiroItemIndex);
+        else
+            ((void (*)(id, SEL, int))imp)(aggregator, sel, gShiroItemIndex);
+        return;
+    }
+    ShiroCallVoid(aggregator, @selector(_notifyNonItemDataChanged));
 }
 
 /* springboard recomputes the item on its own whenever the network changes, and
@@ -150,10 +268,35 @@ static BOOL ShiroUsingVPNConnection(id self, SEL _cmd) {
    answer leaking to the rest of the status bar. the depth counter (rather than
    a bool) keeps nested calls on the same thread scoped correctly too */
 static void ShiroUpdateVPNItem(id self, SEL _cmd) {
-    long *depth = ShiroUpdateDepthSlot();
-    if (depth) (*depth)++;
+    BOOL active = gShiroVPNForced;
+    Class entryClass = objc_getClass("STStatusBarDataBoolEntry");
+    BOOL aggregator = gShiroIsAggregator && gShiroItemOwnerClass && [self isKindOfClass:gShiroItemOwnerClass];
+    ShiroThreadState *state = ShiroUpdateDepthSlot();
+    BOOL outermost = !state || state->depth == 0;
+    BOOL system = outermost && aggregator && entryClass;
+    if (system) {
+        if (active && gShiroItemIndex < 0)
+            ShiroSetSystemVPNEntry(self, entryClass, YES, NO, YES);
+        else if (!active && gShiroSystemVPNForced)
+            /* clear the forced entry first, so a real vpn can set it again and an idle system leaves it off */
+            ShiroSetSystemVPNEntry(self, entryClass, NO, YES, NO);
+    }
+    if (state) {
+        if (outermost) state->notified = NO;
+        state->depth++;
+    }
     if (gShiroOrigUpdateVPNItem) gShiroOrigUpdateVPNItem(self, _cmd);
-    if (depth) (*depth)--;
+    if (state && state->depth > 0) state->depth--;
+    if (!system) return;
+    if (active) {
+        if (ShiroSetSystemVPNEntry(self, entryClass, YES, NO, NO)) {
+            gShiroSystemVPNForced = YES;
+            ShiroAnnounceItem(self);
+        }
+    } else if (gShiroSystemVPNForced) {
+        gShiroSystemVPNForced = NO;
+        if (!state || !state->notified) ShiroAnnounceItem(self);
+    }
 }
 
 /* ios 6 and 7 keep the same item on the data manager instead of an aggregator */
@@ -205,6 +348,9 @@ static BOOL ShiroInstallItemHook(void) {
         Method method = ShiroFindItemMethod(cls, kShiroItemOwners[i]);
         if (!method) continue;
         gShiroItemSel = method_getName(method);
+        gShiroItemOwnerClass = cls;
+        gShiroIsAggregator = ![kShiroItemOwners[i] isEqualToString:@"SBStatusBarDataManager"];
+        if (gShiroIsAggregator) ShiroInstallNotifyHook(cls);
         gShiroOrigUpdateVPNItem = (void (*)(id, SEL))
             method_setImplementation(method, (IMP)ShiroUpdateVPNItem);
         ShiroWriteStatus([NSString stringWithFormat:
@@ -249,6 +395,9 @@ static BOOL ShiroInstallVPNHook(void) {
             return YES;
         }
     }
+/* statuskit draws the icon from the vpn entry the item hook writes, so the
+   telephony getter is not needed there */
+    if (objc_getClass("STStatusBarDataBoolEntry") != Nil) return YES;
 /* the item hook is in place but springboard has not published the getter yet */
     if (!gShiroHookFailureLogged) {
         gShiroHookFailureLogged = YES;
@@ -328,8 +477,15 @@ static int ShiroDataConnectionType(void) {
     return call(telephony, sel);
 }
 
+/* ios 13 and later bind the tunnel's utun to the physical link in shirod, and
+   the status bar keeps wifi on its own. forcing the primary flag there would
+   fight the kernel's own update */
+static BOOL ShiroStatusKitDrawsVPN(void) {
+    return objc_getClass("STStatusBarDataBoolEntry") != Nil;
+}
+
 static void ShiroInstallWiFiHook(void) {
-    if (gShiroOrigPrimaryChanged || gShiroWiFiHookTried) return;
+    if (gShiroOrigPrimaryChanged || gShiroWiFiHookTried || ShiroStatusKitDrawsVPN()) return;
     Class cls = NSClassFromString(@"SBWiFiManager");
     if (!cls) return; /* springboard may publish it later */
     gShiroWiFiHookTried = YES;
